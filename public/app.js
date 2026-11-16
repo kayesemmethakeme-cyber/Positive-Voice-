@@ -90,9 +90,9 @@ function applyAppearance(p){
  try{localStorage.setItem('suhuis-appearance-v1',JSON.stringify(x))}catch(e){}
  document.documentElement.style.setProperty('--app-font',x.font);
  document.body.dataset.wallpaper=x.wallpaper;document.body.dataset.ornament=x.ornament;
- document.documentElement.lang=x.language;document.documentElement.dir=x.language==='fa'?'rtl':'ltr';
- document.body.classList.toggle('locale-fa',x.language==='fa');
+ // The locale controller owns lang, dir and the transition between translated and source text.
  if(window.SUHAISLocale)window.SUHAISLocale.setLanguage(x.language);
+ else {document.documentElement.lang=x.language;document.documentElement.dir=x.language==='fa'?'rtl':'ltr';}
  document.querySelectorAll('.about-en').forEach(e=>e.hidden=x.language==='fa');
  document.querySelectorAll('.about-fa').forEach(e=>e.hidden=x.language!=='fa');
  const lang=$('#appLanguage'),font=$('#appFont'),wall=$('#appWallpaper'),orn=$('#appOrnament');
