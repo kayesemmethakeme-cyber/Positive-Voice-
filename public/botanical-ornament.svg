@@ -57,4 +57,4 @@
  <path d="M0 30q80 15 100 95q25-75 95-95M1600 30q-80 15-100 95q-25-75-95-95"/>
  <path d="M0 1770q90-10 110-90q20 75 100 90M1600 1770q-90-10-110-90q-20 75-100 90"/>
 </g>
-</svg>
+<g opacity=".42" filter="url(#soft)"><path d="M230 145Q420 270 620 150T1010 150T1390 165M240 1640Q420 1510 620 1640T1010 1640T1390 1625" fill="none" stroke="#96795e" stroke-width="5"/><use href="#rose" transform="translate(360 205) scale(.72)"/><use href="#rose" transform="translate(800 160) scale(.56)"/><use href="#rose" transform="translate(1230 215) scale(.7)"/><use href="#rose" transform="translate(360 1600) scale(.7)"/><use href="#rose" transform="translate(800 1650) scale(.55)"/><use href="#rose" transform="translate(1230 1590) scale(.7)"/><use href="#sprig" transform="translate(470 250) rotate(35) scale(.85)"/><use href="#sprig" transform="translate(1120 250) rotate(145) scale(.85)"/><use href="#sprig" transform="translate(470 1560) rotate(215) scale(.85)"/><use href="#sprig" transform="translate(1120 1560) rotate(325) scale(.85)"/></g><g opacity=".13" fill="none" stroke="#8b715d" stroke-width="8"><path d="M250 430Q800 300 1350 430M250 1380Q800 1500 1350 1380"/></g></svg>
