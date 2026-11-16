@@ -72,7 +72,7 @@ app.use('/api',(req,res,next)=>{
   });
 });
 app.get('/api/supabase-config',(req,res)=>{
-  const url=String(process.env.SUPABASE_URL||'').replace(/\\/$/,'');
+  const url=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
   const key=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
   if(!url||!key)return res.status(503).json({error:'Supabase account configuration is missing on the server.'});
   res.set('Cache-Control','no-store').json({url,key});
