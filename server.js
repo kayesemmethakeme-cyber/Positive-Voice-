@@ -86,6 +86,31 @@ function consumeOAuthState(state) {
     return true;
   } catch { return false; }
 }
+app.post('/auth/google/token', ensureConfigured, async (req, res) => {
+  try {
+    if (req.get('X-Requested-With') !== 'XmlHttpRequest') {
+      return res.status(400).json({ error: 'Invalid Google sign-in request.' });
+    }
+    const accessToken = String(req.body?.access_token || '');
+    if (!accessToken) return res.status(400).json({ error: 'Google did not return an access token.' });
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({ access_token: accessToken });
+    const yt = google.youtube({ version: 'v3', auth });
+    const me = await yt.channels.list({ part: ['snippet'], mine: true });
+    const channel = me.data.items?.[0];
+    if (!channel) return res.status(403).json({ error: 'Google authorized the account, but no YouTube channel was returned.' });
+    req.session.tokens = { access_token: accessToken, expiry_date: Date.now() + 55 * 60 * 1000 };
+    req.session.channel = { id: channel.id, title: channel.snippet?.title };
+    req.session.save(err => {
+      if (err) return res.status(500).json({ error: 'YouTube connected, but the app could not save your login session.' });
+      res.json({ ok: true, channel: req.session.channel });
+    });
+  } catch (e) {
+    console.error('Google token validation:', e.message);
+    res.status(401).json({ error: 'Google access token could not be verified: ' + e.message });
+  }
+});
+
 app.get('/api/oauth-config', ensureConfigured, (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID, redirectUri: process.env.GOOGLE_REDIRECT_URI, state: createOAuthState() });
 });
