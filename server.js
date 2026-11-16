@@ -84,9 +84,10 @@ app.post('/api/discover',async(req,res)=>{
   }
   res.json({videos:found,requested,returned:found.length,pages:1,batches:db.batches,totalRemembered:Object.keys(db.videos).length,nextPageToken:response.data.nextPageToken||null,hasMore:Boolean(response.data.nextPageToken),pageSize:50,quotaNote:'One YouTube search page was requested. Load more only when you need additional results.'});
  }catch(e){
-  const data=e.response?.data?.error||{},reason=data.errors?.[0]?.reason||'',message=data.message||e.message||'Unknown YouTube API error',code=e.response?.status||e.code;
-  console.error('Discovery:',{status:code,reason,message});
-  if(reason==='quotaExceeded'||reason==='dailyLimitExceeded'||reason==='quotaExceededUnreg')return res.status(429).json({error:'YouTube daily search quota has been exhausted for this Google Cloud project. SUHAIS cannot bypass YouTube quota. Try again after the quota resets, or request a quota increase in Google Cloud Console.',reason});
+  const apiError=e.response?.data?.error||{},details=Array.isArray(apiError.errors)?apiError.errors:[],reason=details[0]?.reason||'',message=apiError.message||e.message||'Unknown YouTube API error',code=e.response?.status||e.code;
+  const quotaFailure=/quota|daily.?limit|rate.?limit/i.test(message+' '+reason)||details.some(x=>/quota|daily.?limit|rate.?limit/i.test(String(x.reason||'')+' '+String(x.message||'')));
+  console.error('Discovery:',{status:code,reason,message,quotaFailure});
+  if(quotaFailure)return res.status(429).json({code:'YOUTUBE_QUOTA_EXHAUSTED',error:'YouTube has rejected this search because the Google Cloud project has reached its Search Queries daily quota. This is a Google API limit, not a SUHAIS loading error. Further searches will fail until the quota resets or Google approves a higher quota. Check Google Cloud Console → YouTube Data API v3 → Quotas to see the exact limit and usage. Also check whether another app or API key in the same Google Cloud project is using the quota.',reason:reason||'quotaExceeded'});
   if(reason==='keyInvalid'||reason==='accessNotConfigured'||reason==='forbidden')return res.status(502).json({error:'YouTube Data API rejected the search configuration: '+message,reason});
   res.status(502).json({error:'YouTube video search failed: '+message,reason:reason||undefined});
  }
