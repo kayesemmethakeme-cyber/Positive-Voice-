@@ -125,3 +125,8 @@ body[data-ornament="none"]:before{display:none}
 .app-shell,.app-main,main,header{position:relative;z-index:1}
 .panel,.notice,.video,.draft-card,.history-row{background-color:rgba(255,251,246,.78)}
 @media(max-width:700px){body:before{background-size:auto 100%;background-position:center top;opacity:.19}.panel,.notice{background-color:rgba(255,251,246,.76)}}
+
+/* Header connection control: readable antique-cream lettering, never stark white. */
+header .connection-action,.connection-action{color:#f1dfc5!important;background:rgba(63,42,34,.42)!important;border:1px solid #c9a875!important;box-shadow:inset 0 1px rgba(255,244,224,.08);font-family:Georgia,"Palatino Linotype",serif;font-size:13px;font-weight:600;letter-spacing:.015em;text-shadow:none;-webkit-appearance:none;appearance:none}
+header .connection-action:hover,.connection-action:hover{background:rgba(48,32,27,.62)!important;color:#fff0d8!important}
+header .connection-action:focus-visible{outline:2px solid #e4c58e;outline-offset:3px}
