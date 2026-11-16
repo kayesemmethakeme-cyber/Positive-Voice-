@@ -61,28 +61,40 @@ app.get('/api/status', (req, res) => res.json({
   mode: 'individual-approval'
 }));
 
+const pendingOAuth = new Map();
 function createOAuthState() {
-  const payload = Buffer.from(JSON.stringify({ t: Date.now(), n: crypto.randomBytes(24).toString('hex') })).toString('base64url');
+  const nonce = crypto.randomBytes(24).toString('hex');
+  const codeVerifier = crypto.randomBytes(32).toString('base64url');
+  const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+  const payload = Buffer.from(JSON.stringify({ t: Date.now(), n: nonce })).toString('base64url');
   const signature = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(payload).digest('base64url');
-  return payload + '.' + signature;
+  pendingOAuth.set(nonce, { codeVerifier, createdAt: Date.now() });
+  return { state: payload + '.' + signature, codeChallenge, nonce };
 }
-function validOAuthState(state) {
-  if (typeof state !== 'string') return false;
+function readOAuthState(state) {
+  if (typeof state !== 'string') return null;
   const parts = state.split('.');
-  if (parts.length !== 2) return false;
+  if (parts.length !== 2) return null;
   const expected = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(parts[0]).digest();
   let supplied;
-  try { supplied = Buffer.from(parts[1], 'base64url'); } catch { return false; }
-  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return false;
+  try { supplied = Buffer.from(parts[1], 'base64url'); } catch { return null; }
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return null;
   try {
     const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
-    return Number.isFinite(payload.t) && Date.now() - payload.t >= 0 && Date.now() - payload.t < 10 * 60 * 1000;
-  } catch { return false; }
+    if (!Number.isFinite(payload.t) || Date.now() - payload.t < 0 || Date.now() - payload.t >= 10 * 60 * 1000) return null;
+    const pending = pendingOAuth.get(payload.n);
+    if (!pending || Date.now() - pending.createdAt >= 10 * 60 * 1000) return null;
+    pendingOAuth.delete(payload.n);
+    return pending;
+  } catch { return null; }
 }
 app.get('/auth/google', ensureConfigured, (req, res) => {
-  const state = createOAuthState();
+  const auth = createOAuthState();
   const url = oauth2Client.generateAuthUrl({
-    access_type: 'offline', prompt: 'consent', state,
+    access_type: 'offline', prompt: 'consent',
+    state: auth.state,
+    code_challenge: auth.codeChallenge,
+    code_challenge_method: 'S256',
     scope: ['https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/youtube.force-ssl']
   });
   res.redirect(url);
@@ -90,21 +102,49 @@ app.get('/auth/google', ensureConfigured, (req, res) => {
 
 app.get('/oauth2callback', ensureConfigured, async (req, res) => {
   try {
-    if (!validOAuthState(String(req.query.state || ''))) return res.status(400).send('Google sign-in state is invalid or expired. Please return to Positive Voice and connect again.');
-    const { tokens } = await oauth2Client.getToken(String(req.query.code || ''));
-    req.session.tokens = tokens;
+    const pending = readOAuthState(String(req.query.state || ''));
+    if (!pending) return res.status(400).send('Google sign-in state is invalid or expired. Please return to Positive Voice and connect again.');
+    if (req.query.error) return res.status(400).send('Google authorization was not completed: ' + String(req.query.error));
+    if (!req.query.code) return res.status(400).send('Google did not return an authorization code. Please try connecting again.');
+    const body = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      code: String(req.query.code),
+      code_verifier: pending.codeVerifier,
+      grant_type: 'authorization_code',
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI
+    });
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body
+    });
+    const tokenData = await tokenResponse.json();
+    if (!tokenResponse.ok) {
+      console.error('OAuth token exchange:', tokenData.error, tokenData.error_description);
+      return res.status(502).send('Google token exchange failed: ' + String(tokenData.error_description || tokenData.error || 'unknown error'));
+    }
+    const tokens = {
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      scope: tokenData.scope,
+      token_type: tokenData.token_type,
+      expiry_date: Date.now() + Number(tokenData.expires_in || 3600) * 1000
+    };
     oauth2Client.setCredentials(tokens);
     const yt = google.youtube({ version: 'v3', auth: oauth2Client });
     const me = await yt.channels.list({ part: ['snippet'], mine: true });
     const channel = me.data.items?.[0];
+    req.session.tokens = tokens;
     req.session.channel = channel ? { id: channel.id, title: channel.snippet?.title } : { title: 'Connected YouTube account' };
-    res.redirect('/?connected=1');
+    req.session.save(err => {
+      if (err) return res.status(500).send('YouTube connected, but the app could not save your login session. Please try again.');
+      res.redirect('/?connected=1');
+    });
   } catch (e) {
     console.error('OAuth callback:', e.message);
-    res.status(500).send('Could not connect YouTube. Check OAuth settings and try again.');
+    res.status(500).send('Could not connect YouTube. Check the server logs for the OAuth callback error.');
   }
 });
-
 app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
 
 app.post('/api/discover', async (req, res) => {
