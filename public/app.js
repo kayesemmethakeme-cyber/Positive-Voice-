@@ -51,8 +51,13 @@ async function performDiscoveryPage(reset=false){
   if(!videos.length)$('#results').innerHTML='<div class="empty">No videos matched these filters on this page. Try All results in Advanced discovery options or broaden your search.</div>';
   await refresh();
  }catch(e){
-  $('#results').innerHTML=(videos.length?'':'<div class="empty">')+esc(e.message)+(videos.length?'':'</div>');
-  if(more){more.hidden=!discoveryNextPageToken;more.disabled=false;more.textContent='Retry loading next page'}
+  const quota=/daily quota|Search Queries daily quota|YOUTUBE_QUOTA_EXHAUSTED/i.test(e.message);
+  const message=quota?'YouTube search quota reached for this Google Cloud project. SUHAIS cannot bypass this limit. Check Google Cloud Console → YouTube Data API v3 → Quotas, or wait for the reset. Previously loaded videos are preserved.':e.message;
+  $('#discoveryStats').textContent=quota?'Search paused: YouTube daily quota reached.': 'Search could not be completed.';
+  if(!videos.length)$('#results').innerHTML='<div class="empty">'+esc(message)+'</div>';
+  else toast(message);
+  if(more){more.hidden=true;more.disabled=false;more.textContent='Load next 50 videos'}
+  if(quota)toast('Daily YouTube search quota reached. Check Google Cloud quota usage; repeated retries will not help.');
  }finally{
   discoveryLoading=false;btn.disabled=false;btn.textContent='Search';if(more&&more.disabled){more.disabled=false;more.textContent='Load next 50 videos'}
  }
