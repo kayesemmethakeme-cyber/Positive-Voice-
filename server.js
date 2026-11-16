@@ -4,30 +4,12 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { google } = require('googleapis');
 const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
 const { requireSupabaseUser, supabaseAuthConfigured } = require('./server/supabase-auth');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const required = ['GOOGLE_CLIENT_ID','YOUTUBE_API_KEY'];
 const missing = required.filter(k => !process.env[k]);
-const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
-fs.mkdirSync(dataDir, { recursive: true });
-const dbFile = path.join(dataDir, 'positive-voice.json');
-function loadDb(){
-  try { return JSON.parse(fs.readFileSync(dbFile,'utf8')); }
-  catch {
-    const initial = { videos: {}, batches: 0 };
-    // Preserve the old prototype's seen-video IDs during this upgrade.
-    try {
-      const old = JSON.parse(fs.readFileSync(path.join(dataDir,'discovery-state.json'),'utf8'));
-      for (const id of old.seenIds || []) initial.videos[id] = { videoId:id, firstSeenAt:new Date().toISOString(), status:'previously-discovered', published:false, drafts:[] };
-      initial.batches = old.batches || 0;
-    } catch {}
-    return initial;
-  }
-}
 // User data is stored in Supabase with the signed-in user's JWT.
 // RLS on public.user_workspace enforces ownership; no service-role key is used.
 const { AsyncLocalStorage } = require('async_hooks');
