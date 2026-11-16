@@ -23,6 +23,7 @@ drop trigger if exists on_suhuis_auth_user_created on auth.users;
 create trigger on_suhuis_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_suhuis_user();
+revoke execute on function public.handle_new_suhuis_user() from public, anon, authenticated;
 
 create or replace function public.set_suhuis_updated_at()
 returns trigger
@@ -39,6 +40,7 @@ drop trigger if exists profiles_set_updated_at on public.profiles;
 create trigger profiles_set_updated_at
   before update on public.profiles
   for each row execute function public.set_suhuis_updated_at();
+revoke execute on function public.set_suhuis_updated_at() from public, anon, authenticated;
 
 drop trigger if exists user_workspace_set_updated_at on public.user_workspace;
 create trigger user_workspace_set_updated_at
