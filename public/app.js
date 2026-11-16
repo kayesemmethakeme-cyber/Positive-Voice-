@@ -82,28 +82,28 @@ function setWorkspaceView(view){const names=['overview','discovery','studio','li
 function renderDashboard(){const items=window.pvHistoryItems||[],comments=items.flatMap(v=>(v.publishedComments||[]).map(c=>({...c,title:v.title,channel:v.channel}))),pending=comments.filter(c=>c.isPublic===false).length,edited=comments.filter(c=>c.editedAt||(c.revisions||[]).length>1).length,active=[...drafts.values()].filter(d=>!d.published),approved=active.filter(d=>d.approved).length;const put=(id,n)=>{const e=$(id);if(e)e.textContent=Number(n||0).toLocaleString()};[['#metricVideos',items.length],['#metricPublished',comments.length],['#metricDrafts',active.length],['#metricApproved',approved],['#analyticsVideos',items.length],['#analyticsPublished',comments.length],['#analyticsEdited',edited],['#analyticsPending',pending]].forEach(([id,n])=>put(id,n));const act=$('#overviewActivity');if(act){const recent=comments.slice().sort((a,b)=>String(b.publishedAt||'').localeCompare(String(a.publishedAt||''))).slice(0,5);act.innerHTML=recent.length?recent.map(c=>'<div class="activity-row"><strong>'+esc(c.title||'Video comment')+'</strong><span>'+esc(c.channel||'')+' · '+(c.publishedAt?new Date(c.publishedAt).toLocaleString():'Date unavailable')+'</span></div>').join(''):'<p class="muted">No published activity recorded yet.</p>'}const chart=$('#publishingChart');if(chart){const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-6+i);return d}),counts=days.map(d=>comments.filter(c=>c.publishedAt&&new Date(c.publishedAt)>=d&&new Date(c.publishedAt)<new Date(d.getTime()+86400000)).length),max=Math.max(1,...counts);chart.innerHTML=days.map((d,i)=>'<div class="bar-column"><strong>'+counts[i]+'</strong><div class="bar-track"><span style="height:'+Math.max(3,counts[i]/max*100)+'%"></span></div><small>'+d.toLocaleDateString(undefined,{weekday:'short'})+'</small></div>').join('')}}
 
 // Personal appearance and language preferences
-const appearanceDefaults={font:"'EB Garamond',Georgia,serif",wallpaper:"parchment",ornament:"visible",language:"en"};
-function appearanceChoice(){return {language:$('#appLanguage')?.value||'en',font:$('#appFont')?.value||appearanceDefaults.font,wallpaper:$('#appWallpaper')?.value||appearanceDefaults.wallpaper,ornament:$('#appOrnament')?.value||appearanceDefaults.ornament}}
+const appearanceDefaults={font:"'EB Garamond',Georgia,serif",fontSize:16,wallpaper:"parchment",ornament:"visible",language:"en"};
+function appearanceChoice(){return {language:$('#appLanguage')?.value||'en',font:$('#appFont')?.value||appearanceDefaults.font,fontSize:Number($('#appFontSize')?.value||appearanceDefaults.fontSize),wallpaper:$('#appWallpaper')?.value||appearanceDefaults.wallpaper,ornament:$('#appOrnament')?.value||appearanceDefaults.ornament}}
 function applyAppearance(p){
  const x={...appearanceDefaults,...p};
  // Save first: changing from Persian to English reloads the page to restore original English text.
  try{localStorage.setItem('suhuis-appearance-v1',JSON.stringify(x))}catch(e){}
- document.documentElement.style.setProperty('--app-font',x.font);
+ document.documentElement.style.setProperty('--app-font',x.font); const fontSize=Math.min(24,Math.max(12,Number(x.fontSize)||16));document.documentElement.style.setProperty('--app-font-scale',String(fontSize/16));
  document.body.dataset.wallpaper=x.wallpaper;document.body.dataset.ornament=x.ornament;
  // The locale controller owns lang, dir and the transition between translated and source text.
  if(window.SUHAISLocale)window.SUHAISLocale.setLanguage(x.language);
  else {document.documentElement.lang=x.language;document.documentElement.dir=x.language==='fa'?'rtl':'ltr';}
  document.querySelectorAll('.about-en').forEach(e=>e.hidden=x.language==='fa');
  document.querySelectorAll('.about-fa').forEach(e=>e.hidden=x.language!=='fa');
- const lang=$('#appLanguage'),font=$('#appFont'),wall=$('#appWallpaper'),orn=$('#appOrnament');
- if(lang)lang.value=x.language;if(font)font.value=x.font;if(wall)wall.value=x.wallpaper;if(orn)orn.value=x.ornament;
+ const lang=$('#appLanguage'),font=$('#appFont'),fontSizeInput=$('#appFontSize'),fontSizeValue=$('#appFontSizeValue'),wall=$('#appWallpaper'),orn=$('#appOrnament');
+ if(lang)lang.value=x.language;if(font)font.value=x.font;if(fontSizeInput)fontSizeInput.value=String(fontSize);if(fontSizeValue)fontSizeValue.textContent=fontSize+' px';if(wall)wall.value=x.wallpaper;if(orn)orn.value=x.ornament;
  const apply=$('#applyAppearance');if(apply){apply.textContent=x.language==='fa'?'به‌کاربستن نما':'Apply appearance';apply.disabled=true;apply.dataset.applied='true'}
 }
 function initAppearance(){
  let saved={};try{saved=JSON.parse(localStorage.getItem('suhuis-appearance-v1')||'{}')}catch(e){}
  applyAppearance(saved);
- ['appLanguage','appFont','appWallpaper','appOrnament'].forEach(id=>$('#'+id)?.addEventListener('change',()=>{const btn=$('#applyAppearance');if(btn){btn.disabled=false;btn.dataset.applied='false'}}));
- $('#applyAppearance')?.addEventListener('click',()=>applyAppearance(appearanceChoice()));
+ ['appLanguage','appFont','appFontSize','appWallpaper','appOrnament'].forEach(id=>$('#'+id)?.addEventListener('change',()=>{const btn=$('#applyAppearance');if(btn){btn.disabled=false;btn.dataset.applied='false'}}));
+ $('#appFontSize')?.addEventListener('input',e=>{const out=$('#appFontSizeValue');if(out)out.textContent=e.target.value+' px'}); $('#applyAppearance')?.addEventListener('click',()=>applyAppearance(appearanceChoice()));
  $('#resetAppearance')?.addEventListener('click',()=>applyAppearance(appearanceDefaults));
 }
 function setupWorkspaceNavigation(){const composer=$('.collective-top'),studio=$('#comment-studio');if(composer&&studio&&!studio.contains(composer))studio.querySelector('.muted')?.after(composer);document.querySelectorAll('.nav-link[data-view]').forEach(e=>e.addEventListener('click',ev=>{ev.preventDefault();setWorkspaceView(e.dataset.view)}));document.querySelectorAll('[data-go]').forEach(e=>e.addEventListener('click',()=>setWorkspaceView(e.dataset.go)));setWorkspaceView('overview')}
