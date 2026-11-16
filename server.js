@@ -6,6 +6,7 @@ const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { requireSupabaseUser, supabaseAuthConfigured } = require('./server/supabase-auth');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
@@ -27,13 +28,55 @@ function loadDb(){
     return initial;
   }
 }
-let db=loadDb();
-function saveDb(){const tmp=dbFile+'.tmp';fs.writeFileSync(tmp,JSON.stringify(db));fs.renameSync(tmp,dbFile)}
+// Keep legacy shared data untouched. Authenticated accounts receive isolated files.
+const { AsyncLocalStorage } = require('async_hooks');
+const userContext = new AsyncLocalStorage();
+function emptyUserDb(){return { videos:{}, batches:0 };}
+function userDbFile(userId){
+  if(!/^[0-9a-f-]{36}$/i.test(String(userId||''))) throw new Error('Invalid authenticated user ID.');
+  const dir=path.join(dataDir,'users');fs.mkdirSync(dir,{recursive:true});
+  return path.join(dir,String(userId)+'.json');
+}
+function loadUserDb(userId){
+  const file=userDbFile(userId);
+  try { const value=JSON.parse(fs.readFileSync(file,'utf8')); if(!value||typeof value!=='object'||!value.videos||typeof value.videos!=='object') return emptyUserDb(); return value; }
+  catch(error){ if(error.code!=='ENOENT') console.error('User workspace read failed:',error.message); return emptyUserDb(); }
+}
+const db = new Proxy({}, {
+  get(_target,key){const store=userContext.getStore();return store?.db?.[key];},
+  set(_target,key,value){const store=userContext.getStore();if(!store)throw new Error('No authenticated workspace context.');store.db[key]=value;return true;}
+});
+function saveDb(){
+  const store=userContext.getStore();
+  if(!store)throw new Error('No authenticated workspace context.');
+  const tmp=store.file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(store.db));fs.renameSync(tmp,store.file);
+}
 const publicYoutube=google.youtube({version:'v3',auth:process.env.YOUTUBE_API_KEY});
 app.use(helmet({contentSecurityPolicy:false,crossOriginOpenerPolicy:{policy:'same-origin-allow-popups'}}));
 app.use(express.json({limit:'1mb'}));
 app.use(express.static(path.join(__dirname,'public')));
 app.use('/api',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-7',legacyHeaders:false}));
+// All application API routes require a verified SUHAIS account. Each request runs
+// inside an isolated per-user workspace; the old shared JSON file is never served.
+app.use('/api',(req,res,next)=>{
+  if(req.path==='/health'||req.path==='/supabase-config') return next();
+  requireSupabaseUser(req,res,()=>{
+    try {
+      const file=userDbFile(req.suhuisUser.id);
+      const accountDb=loadUserDb(req.suhuisUser.id);
+      userContext.run({db:accountDb,file},next);
+    } catch(error) {
+      console.error('Workspace initialization failed:',error.message);
+      res.status(500).json({error:'Could not open your private SUHAIS workspace.'});
+    }
+  });
+});
+app.get('/api/supabase-config',(req,res)=>{
+  const url=String(process.env.SUPABASE_URL||'').replace(/\\/$/,'');
+  const key=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
+  if(!url||!key)return res.status(503).json({error:'Supabase account configuration is missing on the server.'});
+  res.set('Cache-Control','no-store').json({url,key});
+});
 function ensureConfigured(req,res,next){if(missing.length)return res.status(503).json({error:'Server configuration is incomplete.',missing});next()}
 async function generateCommentText(prompt,opts={}){const key=process.env.GEMINI_API_KEY;if(!key)throw new Error('Add GEMINI_API_KEY from Google AI Studio to Render.');const model=process.env.GEMINI_MODEL||'gemini-3.5-flash-lite';const response=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:opts.temperature??0.5,maxOutputTokens:opts.maxOutputTokens??180}})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error((data.error?.message||'Gemini API error')+' (HTTP '+response.status+')');const out=data.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('').trim();if(!out)throw new Error(data.promptFeedback?.blockReason||'Gemini returned no text.');return out}
 function recordFor(id){if(!db.videos[id])db.videos[id]={videoId:id,firstSeenAt:new Date().toISOString(),status:'discovered',published:false,drafts:[]};return db.videos[id]}
