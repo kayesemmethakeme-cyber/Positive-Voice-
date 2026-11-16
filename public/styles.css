@@ -63,7 +63,7 @@ html{scroll-behavior:smooth}section[id],#publishing-queue,#published-library{scr
 /* SUHAIS · rose-pink parchment, antique gold and literary typography */
 :root{--navy:#62412f;--blue:#986b45;--ink:#493329;--muted:#897267;--line:#e8d5c9;--bg:#f5e9e8;--white:#fffaf6;--gold:#b68a4d;--cream:#fff8f0}
 body{background:linear-gradient(135deg,#f4e5e6 0%,#fbf4ed 42%,#f1e4d6 100%);font-family:Georgia,"Times New Roman",serif;position:relative}
-body:before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url('/botanical-ornament.svg'),radial-gradient(ellipse at 12% 12%,#b77f80 0 1%,transparent 22%),radial-gradient(ellipse at 88% 20%,#bd9867 0 1%,transparent 24%),radial-gradient(ellipse at 12% 84%,#b77f80 0 1%,transparent 22%),radial-gradient(ellipse at 90% 88%,#bd9867 0 1%,transparent 24%);background-position:center;background-size:100% 100%;background-repeat:no-repeat;opacity:.26;mix-blend-mode:multiply}body{background-color:#f6eee4;background-image:radial-gradient(ellipse at 50% 0%,#fffaf3 0%,#f6eee4 70%);background-attachment:fixed}.app-shell,.app-main,main{position:relative;z-index:1}.panel,.notice,.video,.draft-card,.history-row{background-color:rgba(255,250,246,.82)}
+body:before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background-image:url('/botanical-ornament.svg'),radial-gradient(ellipse at 12% 12%,#b77f80 0 1%,transparent 22%),radial-gradient(ellipse at 88% 20%,#bd9867 0 1%,transparent 24%),radial-gradient(ellipse at 12% 84%,#b77f80 0 1%,transparent 22%),radial-gradient(ellipse at 90% 88%,#bd9867 0 1%,transparent 24%);background-position:center;background-size:100% 100%;background-repeat:no-repeat;opacity:.13;mix-blend-mode:multiply}body{background-color:#f6eee4;background-image:radial-gradient(ellipse at 50% 0%,#fffaf3 0%,#f6eee4 70%);background-attachment:fixed}.app-shell,.app-main,main{position:relative;z-index:1}.panel,.notice,.video,.draft-card,.history-row{background-color:rgba(255,250,246,.82)}
 .app-shell,.app-main{position:relative;z-index:1}
 header{background:linear-gradient(105deg,#583c32,#79513e 65%,#98744e);border-bottom:1px solid #c9a878}
 .brand strong,.sidebar-brand strong{font-family:Georgia,"Palatino Linotype",serif;letter-spacing:.04em;font-size:19px}
@@ -89,3 +89,8 @@ body:before{background-image:url('/botanical-ornament.svg'),radial-gradient(elli
 .sidebar-brand{border-bottom-color:#b68a4d55}
 .nav-link.active{background:linear-gradient(90deg,#8a6148,#70503b);box-shadow:inset 3px 0 #d8b477}
 .hero h1{font-family:'Palatino Linotype',Palatino,Georgia,serif;font-weight:500;letter-spacing:.015em;text-shadow:0 1px #fff8}
+
+/* Airier, quieter reading surface: the illustration stays present but recedes. */
+body{background-color:#faf5ee;background-image:radial-gradient(ellipse at 50% 4%,rgba(255,253,248,.98),rgba(249,243,235,.96) 62%,rgba(244,235,224,.96));}
+.panel,.notice,.video,.draft-card{background-color:rgba(255,252,248,.90);box-shadow:0 5px 20px rgba(104,67,38,.045)}
+.hero>p:not(.eyebrow),.fine,.muted{color:#88796d}
