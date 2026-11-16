@@ -1,1 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200" viewBox="0 0 1600 1200"><g fill="none" stroke="#9c795e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity=".72"><path d="M55 1180C160 1030 80 890 190 760S270 520 130 380 95 170 210 30"/><path d="M85 1040c-70-35-83-105-42-151 66 12 90 74 42 151zm70-124c-10-73 35-122 98-116 22 65-18 117-98 116zm-60-180c-72-13-105-72-76-130 69-5 110 46 76 130zm-5-178c-5-72 45-117 107-106 16 67-28 114-107 106z"/><path d="M1545 1180c-110-150-30-290-135-420s-80-240 60-380 35-210-80-350"/><path d="M1515 1040c70-35 83-105 42-151-66 12-90 74-42 151zm-70-124c10-73-35-122-98-116-22 65 18 117 98 116zm60-180c72-13 105-72 76-130-69-5-110 46-76 130zm5-178c5-72-45-117-107-106-16 67 28 114 107 106z"/><path d="M0 35h260M0 35v260M1600 35h-260m260 0v260M0 1165h260M0 1165V905m1600 260h-260m260 0V905"/><path d="M25 25c65 0 80 35 80 80M1575 25c-65 0-80 35-80 80M25 1175c65 0 80-35 80-80m1490 80c-65 0-80-35-80-80"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1800" viewBox="0 0 1600 1800">
+<defs>
+ <linearGradient id="wash" x2="0" y2="1"><stop stop-color="#b77f70" stop-opacity=".18"/><stop offset=".5" stop-color="#d9bd91" stop-opacity=".08"/><stop offset="1" stop-color="#a87961" stop-opacity=".16"/></linearGradient>
+ <linearGradient id="petal" x2="1" y2="1"><stop stop-color="#b77b7e"/><stop offset=".55" stop-color="#d4a0a0"/><stop offset="1" stop-color="#ead0b8"/></linearGradient>
+ <linearGradient id="leaf" x2="1" y2="1"><stop stop-color="#66745a"/><stop offset="1" stop-color="#b5a17a"/></linearGradient>
+ <filter id="soft"><feGaussianBlur stdDeviation="1.8"/></filter>
+ <g id="leaflet"><path d="M0 0C-36-38-32-78 3-100C37-68 34-29 0 0Z" fill="url(#leaf)" fill-opacity=".68" stroke="#887b5c" stroke-width="2"/><path d="M0 0L3-94M0-30L-19-55M2-48L22-69" fill="none" stroke="#8b8167" stroke-width="1.5" opacity=".7"/></g>
+ <g id="rose">
+  <g fill="url(#petal)" stroke="#a77b70" stroke-width="2" opacity=".83">
+   <path d="M0 0C-78-8-92-80-44-104C-7-122 25-79 0 0Z"/>
+   <path d="M0 0C-55-65-22-128 30-116C73-105 65-43 0 0Z"/>
+   <path d="M0 0C8-80 79-94 103-48C125-7 70 32 0 0Z"/>
+   <path d="M0 0C70-28 115 24 86 72C60 111 2 70 0 0Z"/>
+   <path d="M0 0C36 66-11 119-61 92C-107 67-68 7 0 0Z"/>
+   <path d="M0 0C-77 38-120-12-91-62C-68-101-7-69 0 0Z"/>
+  </g>
+  <g fill="none" stroke="#96685f" stroke-width="2" opacity=".55"><path d="M-35-76Q-4-53 0 0M24-91Q8-50 0 0M78-35Q39-25 0 0M61 59Q22 30 0 0M-48 70Q-20 26 0 0"/></g>
+  <path d="M-18-9C-35-42 8-65 29-39C49-13 14 14-6 8C-23 3-22-20-7-29C4-36 18-26 12-15" fill="none" stroke="#87564f" stroke-width="5" stroke-linecap="round"/>
+ </g>
+ <g id="sprig" fill="none" stroke="#7c765c" stroke-width="4" stroke-linecap="round">
+  <path d="M0 0C40-70 15-125 65-190"/>
+  <use href="#leaflet" transform="translate(20 -45) rotate(-52) scale(.55)"/>
+  <use href="#leaflet" transform="translate(28 -90) rotate(42) scale(.62)"/>
+  <use href="#leaflet" transform="translate(50 -132) rotate(-50) scale(.58)"/>
+  <use href="#leaflet" transform="translate(60 -170) rotate(45) scale(.5)"/>
+ </g>
+</defs>
+<rect width="1600" height="1800" fill="url(#wash)"/>
+<g opacity=".3" filter="url(#soft)" fill="#9c7967"><path d="M0 300Q210 60 440 260T870 230T1300 180T1600 330V0H0Z"/><path d="M0 1550Q230 1370 500 1550T1000 1480T1600 1580V1800H0Z"/></g>
+<!-- antique engraved floral garlands down both margins -->
+<g opacity=".78">
+ <path d="M48 0C190 170 35 330 145 500S65 810 150 980S60 1280 145 1450S70 1680 125 1800" fill="none" stroke="#88765d" stroke-width="7" opacity=".58"/>
+ <path d="M1552 0C1410 170 1565 330 1455 500S1535 810 1450 980S1540 1280 1455 1450S1530 1680 1475 1800" fill="none" stroke="#88765d" stroke-width="7" opacity=".58"/>
+ <use href="#sprig" transform="translate(90 230) rotate(-15) scale(1.1)"/>
+ <use href="#sprig" transform="translate(110 650) rotate(12) scale(1.15)"/>
+ <use href="#sprig" transform="translate(85 1080) rotate(-18) scale(1.2)"/>
+ <use href="#sprig" transform="translate(120 1510) rotate(18) scale(1.1)"/>
+ <use href="#sprig" transform="translate(1510 230) rotate(195) scale(1.1)"/>
+ <use href="#sprig" transform="translate(1490 650) rotate(168) scale(1.15)"/>
+ <use href="#sprig" transform="translate(1515 1080) rotate(198) scale(1.2)"/>
+ <use href="#sprig" transform="translate(1480 1510) rotate(162) scale(1.1)"/>
+ <use href="#rose" transform="translate(118 410) scale(.82)"/>
+ <use href="#rose" transform="translate(1480 850) scale(.72)"/>
+ <use href="#rose" transform="translate(105 1390) scale(.9)"/>
+ <use href="#rose" transform="translate(1490 1640) scale(.78)"/>
+</g>
+<!-- soft, faded classical garden medallions -->
+<g opacity=".18" fill="none" stroke="#876f5c" stroke-width="5">
+ <path d="M310 230Q430 80 560 220T810 220T1060 220T1290 220"/>
+ <path d="M300 1610Q430 1750 560 1610T810 1610T1060 1610T1300 1610"/>
+ <circle cx="800" cy="225" r="72"/><circle cx="800" cy="225" r="55"/><circle cx="800" cy="1610" r="68"/>
+ <path d="M800 153L825 200L875 225L825 250L800 298L775 250L725 225L775 200Z"/>
+</g>
+<!-- tiny birds and old-world floral curls -->
+<g fill="none" stroke="#806e58" stroke-width="4" opacity=".34" stroke-linecap="round">
+ <path d="M1280 500q45-45 90 0q45-45 90 0M210 1180q40-38 80 0q40-38 80 0"/>
+ <path d="M0 30q80 15 100 95q25-75 95-95M1600 30q-80 15-100 95q-25-75-95-95"/>
+ <path d="M0 1770q90-10 110-90q20 75 100 90M1600 1770q-90-10-110-90q-20 75-100 90"/>
+</g>
+</svg>
