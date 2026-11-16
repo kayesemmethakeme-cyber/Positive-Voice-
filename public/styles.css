@@ -325,3 +325,13 @@ html[dir="rtl"] .app-main{margin-left:0!important;margin-right:252px!important}
  html[dir="rtl"] .sidebar-toggle{left:auto!important;right:12px!important}
  html[dir="ltr"] .app-main,html[dir="rtl"] .app-main{margin-left:0!important;margin-right:0!important}
 }
+
+/* Reliable mobile menu interaction and stacking */
+@media(max-width:800px){
+ #sidebarToggle{display:flex!important;position:fixed!important;z-index:1002!important;pointer-events:auto!important;touch-action:manipulation!important}
+ #appSidebar{z-index:1001!important;max-height:100dvh!important;overflow-y:auto!important;overscroll-behavior:contain}
+ html[dir="ltr"] #appSidebar{left:0!important;right:auto!important;transform:translateX(-110%)!important;visibility:hidden;transition:transform .22s ease,visibility .22s ease!important}
+ html[dir="ltr"] #appSidebar.sidebar-open{transform:translateX(0)!important;visibility:visible}
+ html[dir="rtl"] #appSidebar{left:auto!important;right:0!important;transform:translateX(110%)!important;visibility:hidden;transition:transform .22s ease,visibility .22s ease!important}
+ html[dir="rtl"] #appSidebar.sidebar-open{transform:translateX(0)!important;visibility:visible}
+}
