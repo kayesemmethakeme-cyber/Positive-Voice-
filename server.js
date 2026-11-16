@@ -35,8 +35,8 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '100kb' }));
 app.use(session({
   name: 'pv.sid', secret: process.env.SESSION_SECRET || 'development-only-change-me',
-  resave: false, saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', maxAge: 8 * 60 * 60 * 1000 }
+  proxy: true, resave: false, saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 8 * 60 * 60 * 1000 }
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 const apiLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false });
@@ -68,7 +68,10 @@ app.get('/auth/google', ensureConfigured, (req, res) => {
     access_type: 'offline', prompt: 'consent', state,
     scope: ['https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/youtube.force-ssl']
   });
-  res.redirect(url);
+  req.session.save(err => {
+    if (err) return res.status(500).send('Could not save the sign-in session. Please try again.');
+    res.redirect(url);
+  });
 });
 
 app.get('/oauth2callback', ensureConfigured, async (req, res) => {
