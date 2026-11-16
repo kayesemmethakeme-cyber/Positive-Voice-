@@ -82,3 +82,10 @@ input,textarea,select{background:#fffaf7;border-color:#dfc9bc}
 #results .video{box-shadow:0 3px 12px #80563a0a}
 #toast{background:#593b31}
 @media(min-width:700px){.video{grid-template-columns:24px 170px minmax(0,1fr)}.video img{width:170px}}
+
+/* Antique botanical illustration layer: subdued line-art framing, kept behind controls. */
+body:before{background-image:url('/botanical-ornament.svg'),radial-gradient(ellipse at 8% 16%,#b77f80 0 2%,transparent 15%),radial-gradient(ellipse at 92% 22%,#bd9867 0 2%,transparent 17%),radial-gradient(ellipse at 12% 84%,#b77f80 0 2%,transparent 16%),radial-gradient(ellipse at 90% 88%,#bd9867 0 2%,transparent 16%);background-position:center, left top,right top,left bottom,right bottom;background-size:cover,48% 48%,48% 48%,48% 48%,48% 48%;background-repeat:no-repeat;opacity:.18}
+.app-sidebar{background:linear-gradient(180deg,#4e342d,#6b4937 70%,#493126);border-right:1px solid #b68a4d}
+.sidebar-brand{border-bottom-color:#b68a4d55}
+.nav-link.active{background:linear-gradient(90deg,#8a6148,#70503b);box-shadow:inset 3px 0 #d8b477}
+.hero h1{font-family:'Palatino Linotype',Palatino,Georgia,serif;font-weight:500;letter-spacing:.015em;text-shadow:0 1px #fff8}
