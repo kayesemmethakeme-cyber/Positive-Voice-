@@ -61,23 +61,36 @@ app.get('/api/status', (req, res) => res.json({
   mode: 'individual-approval'
 }));
 
+function createOAuthState() {
+  const payload = Buffer.from(JSON.stringify({ t: Date.now(), n: crypto.randomBytes(24).toString('hex') })).toString('base64url');
+  const signature = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(payload).digest('base64url');
+  return payload + '.' + signature;
+}
+function validOAuthState(state) {
+  if (typeof state !== 'string') return false;
+  const parts = state.split('.');
+  if (parts.length !== 2) return false;
+  const expected = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(parts[0]).digest();
+  let supplied;
+  try { supplied = Buffer.from(parts[1], 'base64url'); } catch { return false; }
+  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return false;
+  try {
+    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
+    return Number.isFinite(payload.t) && Date.now() - payload.t >= 0 && Date.now() - payload.t < 10 * 60 * 1000;
+  } catch { return false; }
+}
 app.get('/auth/google', ensureConfigured, (req, res) => {
-  const state = crypto.randomBytes(24).toString('hex');
-  req.session.oauthState = state;
+  const state = createOAuthState();
   const url = oauth2Client.generateAuthUrl({
     access_type: 'offline', prompt: 'consent', state,
     scope: ['https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/youtube.force-ssl']
   });
-  req.session.save(err => {
-    if (err) return res.status(500).send('Could not save the sign-in session. Please try again.');
-    res.redirect(url);
-  });
+  res.redirect(url);
 });
 
 app.get('/oauth2callback', ensureConfigured, async (req, res) => {
   try {
-    if (!req.query.state || req.query.state !== req.session.oauthState) return res.status(400).send('OAuth state check failed. Please return to Positive Voice and connect again.');
-    delete req.session.oauthState;
+    if (!validOAuthState(String(req.query.state || ''))) return res.status(400).send('Google sign-in state is invalid or expired. Please return to Positive Voice and connect again.');
     const { tokens } = await oauth2Client.getToken(String(req.query.code || ''));
     req.session.tokens = tokens;
     oauth2Client.setCredentials(tokens);
