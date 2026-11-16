@@ -82,9 +82,30 @@ function setWorkspaceView(view){const names=['overview','discovery','studio','li
 function renderDashboard(){const items=window.pvHistoryItems||[],comments=items.flatMap(v=>(v.publishedComments||[]).map(c=>({...c,title:v.title,channel:v.channel}))),pending=comments.filter(c=>c.isPublic===false).length,edited=comments.filter(c=>c.editedAt||(c.revisions||[]).length>1).length,active=[...drafts.values()].filter(d=>!d.published),approved=active.filter(d=>d.approved).length;const put=(id,n)=>{const e=$(id);if(e)e.textContent=Number(n||0).toLocaleString()};[['#metricVideos',items.length],['#metricPublished',comments.length],['#metricDrafts',active.length],['#metricApproved',approved],['#analyticsVideos',items.length],['#analyticsPublished',comments.length],['#analyticsEdited',edited],['#analyticsPending',pending]].forEach(([id,n])=>put(id,n));const act=$('#overviewActivity');if(act){const recent=comments.slice().sort((a,b)=>String(b.publishedAt||'').localeCompare(String(a.publishedAt||''))).slice(0,5);act.innerHTML=recent.length?recent.map(c=>'<div class="activity-row"><strong>'+esc(c.title||'Video comment')+'</strong><span>'+esc(c.channel||'')+' · '+(c.publishedAt?new Date(c.publishedAt).toLocaleString():'Date unavailable')+'</span></div>').join(''):'<p class="muted">No published activity recorded yet.</p>'}const chart=$('#publishingChart');if(chart){const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setHours(0,0,0,0);d.setDate(d.getDate()-6+i);return d}),counts=days.map(d=>comments.filter(c=>c.publishedAt&&new Date(c.publishedAt)>=d&&new Date(c.publishedAt)<new Date(d.getTime()+86400000)).length),max=Math.max(1,...counts);chart.innerHTML=days.map((d,i)=>'<div class="bar-column"><strong>'+counts[i]+'</strong><div class="bar-track"><span style="height:'+Math.max(3,counts[i]/max*100)+'%"></span></div><small>'+d.toLocaleDateString(undefined,{weekday:'short'})+'</small></div>').join('')}}
 
 // Personal appearance and language preferences
-const appearanceDefaults={font:"Georgia,serif",wallpaper:"parchment",ornament:"soft",language:"en"};
-function applyAppearance(p){const x={...appearanceDefaults,...p};document.documentElement.style.setProperty('--app-font',x.font);document.body.dataset.wallpaper=x.wallpaper;document.body.dataset.ornament=x.ornament;document.documentElement.lang=x.language;document.documentElement.dir=x.language==='fa'?'rtl':'ltr';if(window.SUHAISLocale)window.SUHAISLocale.setLanguage(x.language);document.querySelectorAll('.about-en').forEach(e=>e.hidden=x.language==='fa');document.querySelectorAll('.about-fa').forEach(e=>e.hidden=x.language!=='fa');const lang=$('#appLanguage'),font=$('#appFont'),wall=$('#appWallpaper'),orn=$('#appOrnament');if(lang)lang.value=x.language;if(font)font.value=x.font;if(wall)wall.value=x.wallpaper;if(orn)orn.value=x.ornament;try{localStorage.setItem('suhuis-appearance-v1',JSON.stringify(x))}catch(e){}}
-function initAppearance(){let saved={};try{saved=JSON.parse(localStorage.getItem('suhuis-appearance-v1')||'{}')}catch(e){}applyAppearance(saved);['appLanguage','appFont','appWallpaper','appOrnament'].forEach(id=>$('#'+id)?.addEventListener('change',()=>applyAppearance({language:$('#appLanguage').value,font:$('#appFont').value,wallpaper:$('#appWallpaper').value,ornament:$('#appOrnament').value})));$('#resetAppearance')?.addEventListener('click',()=>applyAppearance(appearanceDefaults))}
+const appearanceDefaults={font:"'EB Garamond',Georgia,serif",wallpaper:"parchment",ornament:"visible",language:"en"};
+function appearanceChoice(){return {language:$('#appLanguage')?.value||'en',font:$('#appFont')?.value||appearanceDefaults.font,wallpaper:$('#appWallpaper')?.value||appearanceDefaults.wallpaper,ornament:$('#appOrnament')?.value||appearanceDefaults.ornament}}
+function applyAppearance(p){
+ const x={...appearanceDefaults,...p};
+ // Save first: changing from Persian to English reloads the page to restore original English text.
+ try{localStorage.setItem('suhuis-appearance-v1',JSON.stringify(x))}catch(e){}
+ document.documentElement.style.setProperty('--app-font',x.font);
+ document.body.dataset.wallpaper=x.wallpaper;document.body.dataset.ornament=x.ornament;
+ document.documentElement.lang=x.language;document.documentElement.dir=x.language==='fa'?'rtl':'ltr';
+ document.body.classList.toggle('locale-fa',x.language==='fa');
+ if(window.SUHAISLocale)window.SUHAISLocale.setLanguage(x.language);
+ document.querySelectorAll('.about-en').forEach(e=>e.hidden=x.language==='fa');
+ document.querySelectorAll('.about-fa').forEach(e=>e.hidden=x.language!=='fa');
+ const lang=$('#appLanguage'),font=$('#appFont'),wall=$('#appWallpaper'),orn=$('#appOrnament');
+ if(lang)lang.value=x.language;if(font)font.value=x.font;if(wall)wall.value=x.wallpaper;if(orn)orn.value=x.ornament;
+ const apply=$('#applyAppearance');if(apply){apply.textContent=x.language==='fa'?'به‌کاربستن نما':'Apply appearance';apply.disabled=true;apply.dataset.applied='true'}
+}
+function initAppearance(){
+ let saved={};try{saved=JSON.parse(localStorage.getItem('suhuis-appearance-v1')||'{}')}catch(e){}
+ applyAppearance(saved);
+ ['appLanguage','appFont','appWallpaper','appOrnament'].forEach(id=>$('#'+id)?.addEventListener('change',()=>{const btn=$('#applyAppearance');if(btn){btn.disabled=false;btn.dataset.applied='false'}}));
+ $('#applyAppearance')?.addEventListener('click',()=>applyAppearance(appearanceChoice()));
+ $('#resetAppearance')?.addEventListener('click',()=>applyAppearance(appearanceDefaults));
+}
 function setupWorkspaceNavigation(){const composer=$('.collective-top'),studio=$('#comment-studio');if(composer&&studio&&!studio.contains(composer))studio.querySelector('.muted')?.after(composer);document.querySelectorAll('.nav-link[data-view]').forEach(e=>e.addEventListener('click',ev=>{ev.preventDefault();setWorkspaceView(e.dataset.view)}));document.querySelectorAll('[data-go]').forEach(e=>e.addEventListener('click',()=>setWorkspaceView(e.dataset.go)));setWorkspaceView('overview')}
 
 function getDiscoveryDateRange(){const mode=$('#datePreset').value;if(mode==='any')return {publishedAfter:null,publishedBefore:null};if(mode==='custom'){const from=$('#dateAfter').value,to=$('#dateBefore').value;if(from&&to&&from>to)throw new Error('The start date must be on or before the end date.');return {publishedAfter:from?new Date(from+'T00:00:00.000Z').toISOString():null,publishedBefore:to?new Date(to+'T23:59:59.999Z').toISOString():null}}const now=new Date(),after=new Date(now),days={'24h':1,'7d':7,'30d':30,'90d':90,'6m':183,'1y':365,'2y':730,'5y':1825};after.setTime(now.getTime()-(days[mode]||0)*86400000);return {publishedAfter:after.toISOString(),publishedBefore:null}}
