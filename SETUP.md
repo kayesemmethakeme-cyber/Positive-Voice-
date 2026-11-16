@@ -21,7 +21,7 @@ It does not bulk-post, run in the background, or claim to have watched a video. 
 5. Add the deployed app's callback URL as an Authorized redirect URI: `https://YOUR-DOMAIN/oauth2callback`.
 6. Create an API key for public video search. Restrict it to YouTube Data API v3 and, where practical, your server's IP address.
 
-**This implementation does not require `GOOGLE_CLIENT_SECRET`.** It uses Google Identity Services' browser authorization-code client and the authorization-code/PKCE model. The redirect URI must exactly match `https://YOUR-DOMAIN/oauth2callback` in Google Cloud Console. Do not paste credentials into chat or commit them to GitHub.
+**This implementation does not require a client secret, redirect URI, or session secret.** It uses Google's browser token model. Access tokens are held in the current browser tab's session storage and expire; reconnect YouTube when prompted. Do not paste credentials into chat or commit them to GitHub.
 
 OAuth scope requested for account features: `youtube.readonly` and `youtube.force-ssl`. The latter is required to publish comments. Google may require verification before an app can be used broadly. Do not ask users for their Google password.
 
