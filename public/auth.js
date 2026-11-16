@@ -18,7 +18,7 @@
     title.textContent=updating?'Choose a new password':signup?'Create your SUHAIS account':'Welcome to SUHAIS';
     description.textContent=updating?'Set a new password for your SUHAIS account.':signup?'Create a private workspace for your writing and YouTube activity.':'Sign in to open your private workspace.';
     submit.textContent=updating?'Save new password':signup?'Create account':'Sign in';
-    password.autocomplete=signup?'new-password':'current-password';
+    password.autocomplete=(signup||updating)?'new-password':'current-password';
     modeButton.textContent=signup?'Already have an account? Sign in':'Create an account';
     document.getElementById('authReset').hidden=signup||updating;document.getElementById('authGoogle').hidden=updating;document.getElementById('authEmail').parentElement.querySelector('label')?.toggleAttribute('hidden',updating);document.getElementById('authEmail').hidden=updating;document.getElementById('authEmail').required=!updating;modeButton.hidden=updating;
     setMessage('');
