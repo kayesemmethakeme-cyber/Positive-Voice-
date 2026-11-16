@@ -35,4 +35,29 @@
 "Daily quota":"سهم روزانه","API quota":"سهم دسترسی برنامه","History":"پیشینه","Settings":"سامان‌ها","Search":"جستن",
 "Topic":"زمینه","Keywords":"واژه‌ها","Description":"بازگفت","Channel":"فرستنده","Video":"ویدیو","Draft":"پیش‌نویس","Drafts":"پیش‌نویس‌ها"
 });
-const norm=s=>String(s||'').replace(/\s+/g,' ').trim();const rev=new Map(Object.entries(M));function translate(root=document){const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(w.nextNode())nodes.push(w.currentNode);for(const n of nodes){const raw=n.nodeValue, k=norm(raw);if(M[k]){const lead=raw.match(/^\s*/)?.[0]||'',trail=raw.match(/\s*$/)?.[0]||'';n.nodeValue=lead+M[k]+trail}}root.querySelectorAll?.('[placeholder],[aria-label],[title]').forEach(e=>['placeholder','aria-label','title'].forEach(a=>{const v=e.getAttribute(a),k=norm(v);if(M[k])e.setAttribute(a,M[k])}));root.querySelectorAll?.('option').forEach(e=>{const k=norm(e.textContent);if(M[k])e.textContent=M[k]})}let active=false;function setLanguage(lang){const wasFa=document.body.classList.contains('locale-fa');const fa=lang==='fa';document.documentElement.lang=fa?'fa':'en';document.document.documentElement.dir=fa?'rtl':'ltr';document.body.classList.toggle('locale-fa',fa);document.title=fa?'سهیس — آنچه در دل داری بگو':'SUHAIS — Voice Your Heart';if(fa){translate();if(!active){active=true;new MutationObserver(records=>records.forEach(r=>{r.addedNodes.forEach(n=>{if(n.nodeType===3){const k=norm(n.nodeValue);if(M[k])n.nodeValue=M[k]}else if(n.nodeType===1)translate(n)})})).observe(document.body,{childList:true,subtree:true,characterData:true})}}else if(wasFa)location.reload()}window.SUHAISLocale={setLanguage,translate}})();
+const norm=s=>String(s||'').replace(/\\s+/g,' ').trim();
+const directions={fa:'rtl',ar:'rtl',ur:'rtl',ps:'rtl',he:'rtl',yi:'rtl',sd:'rtl',ug:'rtl',ku:'rtl',en:'ltr',fr:'ltr',de:'ltr',es:'ltr',it:'ltr',pt:'ltr',nl:'ltr',sv:'ltr',no:'ltr',da:'ltr',et:'ltr',tr:'ltr',az:'ltr',id:'ltr',ms:'ltr',hi:'ltr',bn:'ltr',ru:'ltr',uk:'ltr',pl:'ltr',el:'ltr',ja:'ltr',ko:'ltr',zh:'ltr'};
+function directionFor(lang){const base=String(lang||'en').toLowerCase().split('-')[0];return directions[base]||'ltr'}
+function translate(root=document){
+ const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];
+ while(w.nextNode())nodes.push(w.currentNode);
+ for(const n of nodes){const raw=n.nodeValue,k=norm(raw);if(M[k]){const lead=raw.match(/^\\s*/)?.[0]||'',trail=raw.match(/\\s*$/)?.[0]||'';n.nodeValue=lead+M[k]+trail}}
+ root.querySelectorAll?.('[placeholder],[aria-label],[title]').forEach(e=>['placeholder','aria-label','title'].forEach(a=>{const v=e.getAttribute(a),k=norm(v);if(M[k])e.setAttribute(a,M[k])}));
+ root.querySelectorAll?.('option').forEach(e=>{const k=norm(e.textContent);if(M[k])e.textContent=M[k]});
+}
+let active=false;
+function setLanguage(lang){
+ const next=String(lang||'en'),previous=document.documentElement.lang||'en';
+ const changed=previous!==next;
+ document.documentElement.lang=next;
+ document.documentElement.dir=directionFor(next);
+ document.body.classList.toggle('locale-fa',next.split('-')[0]==='fa');
+ document.title=next.split('-')[0]==='fa'?'سهیس — آنچه در دل داری بگو':'SUHAIS — Voice Your Heart';
+ if(changed && previous.split('-')[0]==='fa' && next.split('-')[0]!=='fa'){location.reload();return}
+ if(next.split('-')[0]==='fa'){
+   translate();
+   if(!active){active=true;new MutationObserver(records=>records.forEach(r=>r.addedNodes.forEach(n=>{if(n.nodeType===3){const k=norm(n.nodeValue);if(M[k])n.nodeValue=M[k]}else if(n.nodeType===1)translate(n)}))).observe(document.body,{childList:true,subtree:true,characterData:true})}
+ }
+}
+window.SUHAISLocale={setLanguage,translate,directionFor};
+})();
