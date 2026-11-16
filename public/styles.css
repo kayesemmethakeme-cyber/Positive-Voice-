@@ -292,7 +292,7 @@ body[data-ornament="none"]:before{display:none!important}
 }
 html[dir="rtl"] body,body.locale-fa{direction:rtl;text-align:right}
 html[dir="rtl"] .app-sidebar{right:0;left:auto;border-right:0;border-left:1px solid #b99560}
-html[dir="rtl"] .app-main{margin-left:0;margin-right:var(--sidebar-width,260px)}
+html[dir="rtl"] .app-main{margin-left:0;margin-right:252px}
 html[dir="rtl"] .nav-link:hover,html[dir="rtl"] .nav-link.active{box-shadow:inset -3px 0 #a77c45!important}
 html[dir="rtl"] .section-head,html[dir="rtl"] .metric-card,html[dir="rtl"] .overview-block{text-align:right}
 html[dir="rtl"] .about-principles ul{padding-right:20px;padding-left:0}
@@ -301,5 +301,12 @@ html[dir="rtl"] .about-principles ul{padding-right:20px;padding-left:0}
  body[data-ornament="faint"]:before{opacity:.18!important}
  body[data-ornament="soft"]:before{opacity:.29!important}
  body[data-ornament="visible"]:before{opacity:.42!important}
+ html[dir="rtl"] .app-main{margin-right:0}
+}
+
+@media(max-width:800px){
+ html[dir="rtl"] .app-sidebar{left:auto;right:0;transform:translateX(105%);border-left:0;border-right:1px solid #b99560}
+ html[dir="rtl"] .app-sidebar.sidebar-open{transform:translateX(0)}
+ html[dir="rtl"] .sidebar-toggle{left:auto;right:12px}
  html[dir="rtl"] .app-main{margin-right:0}
 }
