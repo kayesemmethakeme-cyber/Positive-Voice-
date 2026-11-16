@@ -10,22 +10,12 @@ $('#connect').onclick=()=>{
     googleCodeClient=google.accounts.oauth2.initCodeClient({
       client_id:oauthConfig.clientId,
       scope:'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl',
-      ux_mode:'popup',
-      access_type:'offline',
+      ux_mode:'redirect',
+      redirect_uri:oauthConfig.redirectUri,
+      state:oauthConfig.state,
       select_account:true,
-      callback:async response=>{
-        if(response.error){toast('Google sign-in was not completed: '+response.error);return}
-        try{
-          $('#connect').disabled=true;
-          const r=await fetch('/auth/google/code',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'XmlHttpRequest','X-PV-CSRF':oauthConfig.csrf},body:JSON.stringify({code:response.code})});
-          const d=await r.json().catch(()=>({error:'Unexpected server response'}));
-          if(!r.ok)throw new Error(d.error||'Google sign-in failed');
-          toast('YouTube connected successfully.');
-          await refresh();
-        }catch(e){toast(e.message)}
-        finally{$('#connect').disabled=false}
-      },
-      error_callback:error=>{toast('Google sign-in could not open: '+(error.type||'popup error'))}
+      access_type:'offline',
+      prompt:'consent'
     });
   }
   googleCodeClient.requestCode();
