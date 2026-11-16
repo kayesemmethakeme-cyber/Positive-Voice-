@@ -131,3 +131,141 @@ header .connection-action,.connection-action{color:#f1dfc5!important;background:
 header .connection-action:hover,.connection-action:hover{background:rgba(48,32,27,.62)!important;color:#fff0d8!important}
 header .connection-action:focus-visible{outline:2px solid #e4c58e;outline-offset:3px}
 body:before{background-image:url('/botanical-ornament.svg')!important;background-position:center center!important;background-size:100% 100%!important;background-repeat:no-repeat!important;opacity:.24!important;mix-blend-mode:multiply!important}body[data-ornament="faint"]:before{opacity:.16!important}body[data-ornament="soft"]:before{opacity:.24!important}body[data-ornament="visible"]:before{opacity:.34!important}body[data-ornament="none"]:before{display:none!important}.app-main{background:transparent!important}.app-main main{background:transparent!important}.app-main main>.panel,.app-main main>.notice{background:rgba(255,250,245,.70)!important;backdrop-filter:blur(1px)}@media(max-width:800px){body:before{background-size:100% 100%!important;background-position:center center!important;opacity:.25!important}}
+
+/* ===== SUHAIS illuminated-manuscript visual system ===== */
+:root{
+ --navy:#56362f;--blue:#82503f;--ink:#49352b;--muted:#897564;
+ --line:#d9c3a2;--bg:#f1e5d1;--white:#fff8e9;--gold:#b18a50;--cream:#fff6e6;
+ --app-font:"EB Garamond",Georgia,serif;
+}
+html{background:#eadbc2}
+body{
+ color:#49352b;
+ background-color:#eee0c8!important;
+ background-image:
+  radial-gradient(ellipse at 8% 8%,rgba(173,119,99,.13),transparent 29%),
+  radial-gradient(ellipse at 92% 15%,rgba(144,151,112,.13),transparent 28%),
+  radial-gradient(ellipse at 12% 88%,rgba(175,120,115,.12),transparent 30%),
+  radial-gradient(ellipse at 90% 91%,rgba(166,143,99,.13),transparent 30%),
+  linear-gradient(110deg,#eee0c8,#fbf2df 48%,#f0e2cc)!important;
+ background-attachment:fixed!important;
+ font-family:var(--app-font)!important;
+}
+body:before{
+ position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;
+ background-image:url('/botanical-ornament.svg')!important;
+ background-position:center center!important;background-size:100% 100%!important;
+ background-repeat:no-repeat!important;opacity:.34!important;mix-blend-mode:multiply!important;
+}
+body[data-ornament="faint"]:before{opacity:.23!important}
+body[data-ornament="soft"]:before{opacity:.34!important}
+body[data-ornament="visible"]:before{opacity:.47!important}
+body[data-ornament="none"]:before{display:none!important}
+.app-shell,.app-main,main{position:relative;z-index:1;background:transparent!important}
+.app-main{min-height:100vh}
+.app-main header{
+ background:linear-gradient(180deg,rgba(250,239,216,.96),rgba(239,222,192,.94))!important;
+ color:#583a2e!important;border-bottom:1px solid #b99460!important;
+ box-shadow:0 4px 18px rgba(80,48,29,.10)!important;
+}
+.brand strong{font-family:"EB Garamond",Georgia,serif!important;font-size:26px!important;letter-spacing:.12em!important;color:#684233!important}
+.brand small{font-family:"EB Garamond",Georgia,serif!important;color:#825d48!important;font-size:13px!important;font-style:italic;letter-spacing:.035em}
+.logo,.sidebar-logo{
+ border-radius:50%!important;background:radial-gradient(circle,#fff8e8,#e8d0a9)!important;
+ color:#754b36!important;border:1px solid #b8945c!important;
+ box-shadow:inset 0 0 0 3px rgba(255,255,255,.42),0 2px 8px #6a44201c!important;
+ font-family:"EB Garamond",Georgia,serif!important;
+}
+header .connection-action{color:#f7ead1!important;background:#76503c!important;border:1px solid #b58d56!important}
+.header-refresh{background:#f6e8ce!important;color:#674532!important;border:1px solid #c7a978!important}
+.app-sidebar{
+ background:
+  linear-gradient(rgba(248,237,215,.94),rgba(238,222,194,.97)),
+  url('/botanical-ornament.svg') center/cover!important;
+ color:#5d4031!important;border-right:1px solid #b99560!important;
+ box-shadow:5px 0 22px rgba(65,40,25,.12)!important;
+}
+.sidebar-brand{color:#694433!important;border-bottom:1px solid #b9956066!important}
+.sidebar-brand strong{font-family:"EB Garamond",Georgia,serif!important;color:#694433!important;font-size:22px!important;letter-spacing:.12em}
+.sidebar-brand small{font-family:"EB Garamond",Georgia,serif!important;color:#8d654b!important;font-style:italic}
+.nav-heading{color:#a17a4c!important;letter-spacing:.19em!important;font-family:Georgia,serif}
+.nav-link{color:#684c3b!important;border-radius:3px!important;font-family:"EB Garamond",Georgia,serif!important;font-size:16px!important;border-bottom:1px solid rgba(163,126,79,.14)}
+.nav-link>span{color:#98734b!important}
+.nav-link:hover,.nav-link.active{background:linear-gradient(90deg,rgba(185,143,88,.22),rgba(185,143,88,.06))!important;color:#59382d!important;box-shadow:inset 3px 0 #a77c45!important}
+.sidebar-bottom{color:#795c46!important;border-top:1px solid #b9956066!important}
+.sidebar-status-dot{background:#8b9a6a!important}
+.sidebar-toggle{background:#f6e8ce!important;color:#694532!important;border:1px solid #bd9b68!important}
+main{max-width:1180px!important;padding-top:24px!important}
+.hero{
+ margin:8px 0 20px!important;padding:32px 28px!important;position:relative;overflow:hidden;
+ border:1px solid #c9a979!important;border-radius:5px!important;
+ background:linear-gradient(110deg,rgba(255,247,229,.90),rgba(246,230,202,.78)),url('/botanical-ornament.svg') center/cover!important;
+ box-shadow:inset 0 0 0 5px rgba(255,255,255,.28),0 8px 26px rgba(83,52,30,.10)!important;
+}
+.hero:after{content:"❧  ❦  ❧";display:block;text-align:center;color:#a88756;letter-spacing:.5em;font-size:18px;margin-top:18px;opacity:.75}
+.hero h1{font-family:"EB Garamond",Georgia,serif!important;color:#654132!important;font-size:clamp(36px,6vw,56px)!important;font-weight:500!important;line-height:1.02!important;letter-spacing:.005em!important;text-shadow:0 1px rgba(255,255,255,.7)!important}
+.hero>p:not(.eyebrow){font-family:"Lora",Georgia,serif!important;color:#775d49!important;font-size:15px!important;max-width:700px}
+.eyebrow{font-family:Georgia,serif!important;color:#9a7041!important;letter-spacing:.19em!important;font-size:10px!important}
+.panel,.notice{
+ position:relative!important;overflow:hidden;
+ background:linear-gradient(145deg,rgba(255,249,235,.91),rgba(248,237,216,.84))!important;
+ border:1px solid #cdb58c!important;border-radius:5px!important;
+ box-shadow:inset 0 0 0 4px rgba(255,255,255,.27),0 7px 22px rgba(91,58,33,.09)!important;
+}
+.panel:before{
+ content:"";position:absolute;inset:7px;pointer-events:none;border:1px solid rgba(173,137,83,.26);
+}
+.panel>*{position:relative}
+.section-head{padding-bottom:11px;border-bottom:1px solid rgba(174,137,83,.35)}
+.section-head:after{content:"❧";color:#a27b4c;font-size:19px;margin-left:8px}
+.section-head h2,.panel h2,.overview-block h3,.about-grid h3,.about-principles h3{
+ font-family:"EB Garamond",Georgia,serif!important;color:#684333!important;font-weight:600!important;
+}
+.section-head h2{font-size:29px!important}
+.number{border:1px solid #c8a977!important;background:#f3e5c9!important;color:#805638!important;font-family:"EB Garamond",Georgia,serif}
+.metric-card,.overview-block,.about-grid article,.about-principles{
+ background:rgba(255,248,232,.78)!important;border:1px solid #d7c19a!important;border-radius:4px!important;
+ box-shadow:inset 0 0 0 3px rgba(255,255,255,.24)!important;
+}
+.metric-card span,.metric-card small{color:#806a55!important;font-family:"Lora",Georgia,serif}
+.metric-card strong{color:#704833!important;font-family:"EB Garamond",Georgia,serif!important;font-size:34px!important}
+button,.primary,.secondary{font-family:"EB Garamond",Georgia,serif!important;font-size:15px!important;border-radius:4px!important}
+.primary{background:linear-gradient(135deg,#81503b,#a66f4c)!important;color:#fff3dc!important;border:1px solid #75432f!important;box-shadow:inset 0 1px rgba(255,255,255,.2),0 2px 5px #57351d22}
+.primary:hover{background:linear-gradient(135deg,#6d4031,#945b40)!important}
+.secondary{background:linear-gradient(135deg,#f4e7cf,#ead7b8)!important;color:#694833!important;border:1px solid #cbb184!important}
+input,textarea,select{
+ background:rgba(255,251,241,.94)!important;color:#4e382b!important;
+ border:1px solid #cdb58f!important;border-radius:4px!important;
+ font-family:"Lora",Georgia,serif!important;
+}
+input:focus,textarea:focus,select:focus{outline:2px solid rgba(169,126,67,.35)!important;outline-offset:1px}
+label{font-family:"EB Garamond",Georgia,serif!important;color:#684b36!important;font-size:15px!important}
+.central-composer,.advanced-panel,.settings-customize,.settings-connection{
+ background:linear-gradient(145deg,rgba(248,232,208,.91),rgba(255,247,231,.88))!important;
+ border:1px solid #cdb184!important;border-radius:5px!important;
+}
+.central-composer{box-shadow:inset 0 0 0 4px rgba(255,255,255,.25)}
+.video,.draft-card,.history-row{
+ background:rgba(255,249,236,.88)!important;border:1px solid #d4bd96!important;border-radius:5px!important;
+ box-shadow:0 3px 12px rgba(86,55,31,.06)!important;
+}
+.video h3,.draft-card h3,.history-video-head strong{font-family:"EB Garamond",Georgia,serif!important;color:#684331!important;font-size:18px!important}
+.video p,.draft-card .meta,.history-video-head span{font-family:"Lora",Georgia,serif!important;color:#866f59!important}
+.history-comment{background:#f3e7d2!important;border-left-color:#a27c4d!important}
+.notice{color:#6e5743!important}
+.notice strong{color:#694331!important}
+.about-lead{font-family:"Lora",Georgia,serif!important;color:#704d39!important}
+footer{font-family:"EB Garamond",Georgia,serif!important;color:#967c60!important}
+#toast{background:#593a2e!important;border:1px solid #c7a16c!important;font-family:"Lora",Georgia,serif!important}
+@media(max-width:800px){
+ .app-main header{padding-top:58px!important;padding-bottom:13px!important}
+ .app-main main{padding:16px 12px 42px!important}
+ .hero{padding:24px 17px!important;margin-top:4px!important}
+ .panel,.notice{padding:14px!important}
+ body:before{background-size:100% 100%!important;opacity:.30!important}
+ body[data-ornament="faint"]:before{opacity:.20!important}
+ body[data-ornament="soft"]:before{opacity:.30!important}
+ body[data-ornament="visible"]:before{opacity:.42!important}
+ .section-head h2{font-size:26px!important}
+}
+@media(min-width:801px){.app-main main{padding-left:30px!important;padding-right:30px!important}}
