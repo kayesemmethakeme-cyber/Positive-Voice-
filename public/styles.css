@@ -269,3 +269,37 @@ footer{font-family:"EB Garamond",Georgia,serif!important;color:#967c60!important
  .section-head h2{font-size:26px!important}
 }
 @media(min-width:801px){.app-main main{padding-left:30px!important;padding-right:30px!important}}
+
+/* SUHAIS appearance controls and full-page botanical manuscript layer */
+.appearance-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.appearance-actions button{min-width:150px}
+.appearance-actions button:disabled{opacity:.72;cursor:default}
+body:before{
+ content:""!important;position:fixed!important;inset:0!important;z-index:0!important;pointer-events:none!important;
+ background-image:url('/botanical-ornament.svg'),url('/botanical-ornament.svg'),url('/botanical-ornament.svg')!important;
+ background-size:520px 640px,680px 780px,460px 560px!important;
+ background-position:0 0,220px 160px,80px 330px!important;
+ background-repeat:repeat!important;
+ opacity:.29!important;mix-blend-mode:multiply!important;
+}
+body[data-ornament="faint"]:before{opacity:.16!important}
+body[data-ornament="soft"]:before{opacity:.27!important}
+body[data-ornament="visible"]:before{opacity:.39!important}
+body[data-ornament="none"]:before{display:none!important}
+.app-shell,.app-main,main{background:transparent!important}
+.panel,.notice,.video,.draft-card,.history-row,.metric-card,.overview-block,.about-grid article,.about-principles{
+ background-color:rgba(255,249,235,.72)!important;backdrop-filter:blur(1.5px)
+}
+html[dir="rtl"] body,body.locale-fa{direction:rtl;text-align:right}
+html[dir="rtl"] .app-sidebar{right:0;left:auto;border-right:0;border-left:1px solid #b99560}
+html[dir="rtl"] .app-main{margin-left:0;margin-right:var(--sidebar-width,260px)}
+html[dir="rtl"] .nav-link:hover,html[dir="rtl"] .nav-link.active{box-shadow:inset -3px 0 #a77c45!important}
+html[dir="rtl"] .section-head,html[dir="rtl"] .metric-card,html[dir="rtl"] .overview-block{text-align:right}
+html[dir="rtl"] .about-principles ul{padding-right:20px;padding-left:0}
+@media(max-width:800px){
+ body:before{background-size:390px 480px,470px 560px,350px 430px!important;background-position:0 0,160px 150px,45px 300px!important;opacity:.30!important}
+ body[data-ornament="faint"]:before{opacity:.18!important}
+ body[data-ornament="soft"]:before{opacity:.29!important}
+ body[data-ornament="visible"]:before{opacity:.42!important}
+ html[dir="rtl"] .app-main{margin-right:0}
+}
