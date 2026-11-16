@@ -4,8 +4,21 @@ let discoveryNextPageToken=null,discoveryTargetCount=50,discoveryOptions=null,di
 let DRAFT_STORE='pv-drafts-v2';
 let HISTORY_STORE='pv-history-v1';
 function setAccountStorage(userId){DRAFT_STORE='pv-drafts-v2:'+userId;HISTORY_STORE='pv-history-v1:'+userId;}
-function persistDrafts(){try{localStorage.setItem(DRAFT_STORE,JSON.stringify([...drafts.entries()]))}catch(e){toast('Could not save drafts on this device: '+e.message)}}
-function restoreDrafts(){try{const saved=JSON.parse(localStorage.getItem(DRAFT_STORE)||'[]');if(Array.isArray(saved)){for(const [key,value] of saved){if(value?.video&&typeof value.comment==='string')drafts.set(key,value)}draftCounter=drafts.size;if(drafts.size){renderDrafts();$('#queueStatus').textContent='Restored '+drafts.size+' saved draft(s) from this browser.'}}}catch{localStorage.removeItem(DRAFT_STORE)}}
+function persistDrafts(){
+  const entries=[...drafts.entries()];
+  try{localStorage.setItem(DRAFT_STORE,JSON.stringify(entries))}catch(e){toast('Could not save drafts on this device: '+e.message)}
+  if(window.suhuisSupabase&&window.suhuisUser)api('/api/workspace/drafts',{method:'PUT',body:JSON.stringify({entries})}).catch(error=>console.warn('Cloud draft sync:',error.message));
+}
+async function restoreDrafts(){
+  try{const saved=JSON.parse(localStorage.getItem(DRAFT_STORE)||'[]');if(Array.isArray(saved)){for(const [key,value] of saved){if(value?.video&&typeof value.comment==='string')drafts.set(key,value)}}}catch{}
+  try{
+    const cloud=await api('/api/workspace/drafts');
+    for(const [key,value] of (cloud.entries||[])){if(value?.video&&typeof value.comment==='string'&&!drafts.has(key))drafts.set(key,value);}
+    localStorage.setItem(DRAFT_STORE,JSON.stringify([...drafts.entries()]));
+  }catch(error){console.warn('Cloud drafts unavailable:',error.message);}
+  draftCounter=drafts.size;
+  if(drafts.size){renderDrafts();$('#queueStatus').textContent='Restored '+drafts.size+' saved draft(s) from your SUHAIS account.'}
+}
 function localHistory(){try{return JSON.parse(localStorage.getItem(HISTORY_STORE)||'{"seenIds":[],"publishedIds":[]}')}catch{return {seenIds:[],publishedIds:[]}}}
 function saveLocalVideo(id,published=false){const h=localHistory();if(!h.seenIds.includes(id))h.seenIds.push(id);if(published&&!h.publishedIds.includes(id))h.publishedIds.push(id);localStorage.setItem(HISTORY_STORE,JSON.stringify(h))}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -114,5 +127,5 @@ function setupWorkspaceNavigation(){const composer=$('.collective-top'),studio=$
 function getDiscoveryDateRange(){const mode=$('#datePreset').value;if(mode==='any')return {publishedAfter:null,publishedBefore:null};if(mode==='custom'){const from=$('#dateAfter').value,to=$('#dateBefore').value;if(from&&to&&from>to)throw new Error('The start date must be on or before the end date.');return {publishedAfter:from?new Date(from+'T00:00:00.000Z').toISOString():null,publishedBefore:to?new Date(to+'T23:59:59.999Z').toISOString():null}}const now=new Date(),after=new Date(now),days={'24h':1,'7d':7,'30d':30,'90d':90,'6m':183,'1y':365,'2y':730,'5y':1825};after.setTime(now.getTime()-(days[mode]||0)*86400000);return {publishedAfter:after.toISOString(),publishedBefore:null}}
 $('#datePreset').onchange=()=>{$('#customDateRange').hidden=$('#datePreset').value!=='custom'};
 const params=new URLSearchParams(location.search);
-window.suhuisAuthReady.then(()=>{const user=window.suhuisUser;if(!user)return;setAccountStorage(user.id);restoreDrafts();refresh();loadHistory().then(renderDashboard);setupWorkspaceNavigation();initAppearance();}).catch(error=>toast('Account initialization failed: '+error.message));
+window.suhuisAuthReady.then(async()=>{const user=window.suhuisUser;if(!user)return;setAccountStorage(user.id);await restoreDrafts();refresh();loadHistory().then(renderDashboard);setupWorkspaceNavigation();initAppearance();}).catch(error=>toast('Account initialization failed: '+error.message));
 const sidebar=$('#appSidebar'),toggle=$('#sidebarToggle');document.querySelectorAll('.nav-link').forEach(link=>link.addEventListener('click',()=>{document.querySelectorAll('.nav-link').forEach(x=>x.classList.remove('active'));link.classList.add('active');sidebar.classList.remove('sidebar-open');toggle.setAttribute('aria-expanded','false');toggle.innerHTML='☰ <span>Menu</span>'}));
