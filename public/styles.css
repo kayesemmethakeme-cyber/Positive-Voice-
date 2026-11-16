@@ -2,3 +2,5 @@
 .manual-inline{margin-top:9px;display:grid;gap:6px}.manual-inline textarea{min-height:65px;font-size:12px}.manual-actions{display:flex;gap:6px;flex-wrap:wrap}.manual-actions button{font-size:11px;padding:8px 10px}.batch-control{display:flex;align-items:center;gap:8px;font-size:12px}.batch-control input{width:100px}.draft-card{scroll-margin-top:75px}#comment-studio{scroll-margin-top:70px}
 
 .central-composer{border:1px solid #cbd8e8;background:#f6f8fc;border-radius:13px;padding:13px;margin:12px 0 16px}.central-composer textarea{min-height:105px;background:#fff}.central-composer-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:9px}.central-composer-actions span{font-size:12px;color:var(--muted);font-weight:700}.central-composer .fine{margin:8px 0 0}
+
+.writing-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:10px 0}.writing-options>div{min-width:0}.writing-options select{width:100%}@media(max-width:520px){.writing-options{grid-template-columns:1fr}}
