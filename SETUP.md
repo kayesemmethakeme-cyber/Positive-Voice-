@@ -21,7 +21,7 @@ It does not bulk-post, run in the background, or claim to have watched a video. 
 5. Add the deployed app's callback URL as an Authorized redirect URI: `https://YOUR-DOMAIN/oauth2callback`.
 6. Create an API key for public video search. Restrict it to YouTube Data API v3 and, where practical, your server's IP address.
 
-**Required for this implementation:** `GOOGLE_CLIENT_SECRET` must be the client secret belonging to the same Web application OAuth client as `GOOGLE_CLIENT_ID`. The redirect URI must exactly match `https://YOUR-DOMAIN/oauth2callback` in Google Cloud Console. Do not paste secrets into chat or commit them to GitHub.
+**This implementation does not require `GOOGLE_CLIENT_SECRET`.** It uses Google Identity Services' browser authorization-code client and the authorization-code/PKCE model. The redirect URI must exactly match `https://YOUR-DOMAIN/oauth2callback` in Google Cloud Console. Do not paste credentials into chat or commit them to GitHub.
 
 OAuth scope requested for account features: `youtube.readonly` and `youtube.force-ssl`. The latter is required to publish comments. Google may require verification before an app can be used broadly. Do not ask users for their Google password.
 
@@ -32,7 +32,6 @@ Set these environment variables in the hosting provider (do not commit secrets):
 - `BASE_URL=https://YOUR-DOMAIN`
 - `SESSION_SECRET=` a long random secret
 - `GOOGLE_CLIENT_ID=` OAuth client ID
-- `GOOGLE_CLIENT_SECRET=` OAuth client secret (required for the server-side authorization-code exchange)
 - `GOOGLE_REDIRECT_URI=https://YOUR-DOMAIN/oauth2callback`
 - `YOUTUBE_API_KEY=` restricted YouTube Data API key
 - `OPENAI_API_KEY=` optional key for AI drafts
