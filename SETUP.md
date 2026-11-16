@@ -29,7 +29,7 @@ Set these environment variables in the hosting provider (do not commit secrets):
 - `BASE_URL=https://YOUR-DOMAIN`
 - `SESSION_SECRET=` a long random secret
 - `GOOGLE_CLIENT_ID=` OAuth client ID
-- `GOOGLE_CLIENT_SECRET=` OAuth client secret
+- `GOOGLE_CLIENT_SECRET=` OAuth client secret (required for the server-side authorization-code exchange)
 - `GOOGLE_REDIRECT_URI=https://YOUR-DOMAIN/oauth2callback`
 - `YOUTUBE_API_KEY=` restricted YouTube Data API key
 - `OPENAI_API_KEY=` optional key for AI drafts
@@ -37,7 +37,7 @@ Set these environment variables in the hosting provider (do not commit secrets):
 
 Then install dependencies with `npm install` and start with `npm start`.
 
-For production, configure HTTPS, a persistent session store (the included in-memory session store is for a single-instance prototype), secure secret storage, monitoring, and a privacy policy. Also attach a persistent disk/volume to the host and preserve the `data/discovery-state.json` file; otherwise the seen-video history will be lost when the server is rebuilt or moved. Review Google OAuth verification requirements and YouTube API Services policies before public release.
+For production, configure HTTPS, secure secret storage, monitoring, and a privacy policy. OAuth credentials are stored in an encrypted, HttpOnly, Secure, SameSite cookie so the connection survives page reloads and server restarts; the encryption key is `SESSION_SECRET`. Also attach a persistent disk/volume to the host and preserve the `data/discovery-state.json` file; otherwise the seen-video history will be lost when the server is rebuilt or moved. Review Google OAuth verification requirements and YouTube API Services policies before public release.
 
 ## 3. Open on an iPhone
 Once deployed, open your HTTPS domain in Safari → Share → Add to Home Screen. The app will then launch like an app. You can also use the website directly.
