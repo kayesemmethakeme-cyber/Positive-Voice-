@@ -88,30 +88,35 @@ function readOAuthState(state) {
     return pending;
   } catch { return null; }
 }
-app.get('/auth/google', ensureConfigured, (req, res) => {
-  const auth = createOAuthState();
-  const url = oauth2Client.generateAuthUrl({
-    access_type: 'offline', prompt: 'consent',
-    state: auth.state,
-    code_challenge: auth.codeChallenge,
-    code_challenge_method: 'S256',
-    scope: ['https://www.googleapis.com/auth/youtube.readonly', 'https://www.googleapis.com/auth/youtube.force-ssl']
+app.get('/api/oauth-config', ensureConfigured, (req, res) => {
+  req.session.oauthNonce = crypto.randomBytes(24).toString('hex');
+  req.session.save(err => {
+    if (err) return res.status(500).json({ error: 'Could not initialize Google sign-in. Please reload and try again.' });
+    res.json({ clientId: process.env.GOOGLE_CLIENT_ID, csrf: req.session.oauthNonce });
   });
-  res.redirect(url);
 });
 
-app.get('/oauth2callback', ensureConfigured, async (req, res) => {
+app.post('/auth/google/code', ensureConfigured, async (req, res) => {
   try {
-    const pending = readOAuthState(String(req.query.state || ''));
-    if (!pending) return res.status(400).send('Google sign-in state is invalid or expired. Please return to Positive Voice and connect again.');
-    if (req.query.error) return res.status(400).send('Google authorization was not completed: ' + String(req.query.error));
-    if (!req.query.code) return res.status(400).send('Google did not return an authorization code. Please try connecting again.');
+    if (req.get('X-Requested-With') !== 'XmlHttpRequest') {
+      return res.status(400).json({ error: 'Invalid Google sign-in request.' });
+    }
+    const csrf = req.get('X-PV-CSRF');
+    if (!req.session.oauthNonce || !csrf || csrf !== req.session.oauthNonce) {
+      return res.status(400).json({ error: 'Google sign-in expired. Reload Positive Voice and connect again.' });
+    }
+    delete req.session.oauthNonce;
+    const code = String(req.body?.code || '');
+    if (!code) return res.status(400).json({ error: 'Google did not return an authorization code.' });
+
+    // Google Identity Services Code Model (popup UX). For current Google
+    // Web application OAuth clients, client_secret is not used. In popup
+    // mode, redirect_uri is the web origin, not the old callback path.
     const body = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID,
-      code: String(req.query.code),
-      code_verifier: pending.codeVerifier,
+      code,
       grant_type: 'authorization_code',
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI
+      redirect_uri: new URL(process.env.BASE_URL).origin
     });
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -121,7 +126,7 @@ app.get('/oauth2callback', ensureConfigured, async (req, res) => {
     const tokenData = await tokenResponse.json();
     if (!tokenResponse.ok) {
       console.error('OAuth token exchange:', tokenData.error, tokenData.error_description);
-      return res.status(502).send('Google token exchange failed: ' + String(tokenData.error_description || tokenData.error || 'unknown error'));
+      return res.status(502).json({ error: 'Google token exchange failed: ' + String(tokenData.error_description || tokenData.error || 'unknown error') });
     }
     const tokens = {
       access_token: tokenData.access_token,
@@ -137,12 +142,12 @@ app.get('/oauth2callback', ensureConfigured, async (req, res) => {
     req.session.tokens = tokens;
     req.session.channel = channel ? { id: channel.id, title: channel.snippet?.title } : { title: 'Connected YouTube account' };
     req.session.save(err => {
-      if (err) return res.status(500).send('YouTube connected, but the app could not save your login session. Please try again.');
-      res.redirect('/?connected=1');
+      if (err) return res.status(500).json({ error: 'YouTube connected, but the app could not save your login session. Please try again.' });
+      res.json({ ok: true, channel: req.session.channel });
     });
   } catch (e) {
     console.error('OAuth callback:', e.message);
-    res.status(500).send('Could not connect YouTube. Check the server logs for the OAuth callback error.');
+    res.status(500).json({ error: 'Could not connect YouTube. Check the server logs for the OAuth callback error.' });
   }
 });
 app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
