@@ -52,16 +52,30 @@ app.use(express.static(path.join(__dirname,'public')));
 app.use('/api',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-7',legacyHeaders:false}));
 // All application API routes require a verified SUHAIS account. Each request runs
 // inside an isolated per-user workspace; the old shared JSON file is never served.
+const workspaceQueues = new Map();
 app.use('/api',(req,res,next)=>{
   if(req.path==='/health'||req.path==='/supabase-config') return next();
-  requireSupabaseUser(req,res,async()=>{
-    try {
-      const accountDb=await loadUserDb(req.suhuisUser.id,req.supabaseAccessToken);
-      userContext.run({db:accountDb,userId:req.suhuisUser.id,accessToken:req.supabaseAccessToken},next);
-    } catch(error) {
-      console.error('Workspace initialization failed:',error.message);
-      res.status(503).json({error:'Your private SUHAIS workspace could not be loaded from Supabase. No shared data was returned.'});
-    }
+  requireSupabaseUser(req,res,()=>{
+    const userId=req.suhuisUser.id;
+    const previous=workspaceQueues.get(userId)||Promise.resolve();
+    let release;
+    const hold=new Promise(resolve=>{release=resolve;});
+    const tail=previous.catch(()=>{}).then(()=>hold);
+    workspaceQueues.set(userId,tail);
+    previous.catch(()=>{}).then(async()=>{
+      let released=false;
+      const finish=()=>{if(released)return;released=true;release();if(workspaceQueues.get(userId)===tail)workspaceQueues.delete(userId);};
+      try {
+        const accountDb=await loadUserDb(userId,req.supabaseAccessToken);
+        userContext.run({db:accountDb,userId,accessToken:req.supabaseAccessToken},()=>{
+          res.once('finish',finish);res.once('close',finish);next();
+        });
+      } catch(error) {
+        finish();
+        console.error('Workspace initialization failed:',error.message);
+        res.status(503).json({error:'Your private SUHAIS workspace could not be loaded from Supabase. No shared data was returned.'});
+      }
+    });
   });
 });
 app.get('/api/supabase-config',(req,res)=>{
