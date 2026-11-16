@@ -350,3 +350,24 @@ body.locale-fa{font-family:var(--app-font,'Vazirmatn',sans-serif)!important}body
 /* User-adjustable reading size */
 body :is(p,li,label,button,input,textarea,select,.nav-link,.nav-heading,.muted,.fine,.eyebrow,.about-grid h3,.about-principles h3,.section-head h2,.panel h2,.video h3,.draft-card h3,.meta,.metric-card span,.metric-card small,.field-help,.statusline){font-size:calc(1em * var(--app-font-scale,1))!important}
 .font-size-control{min-width:180px}.font-size-control label{display:flex;align-items:center;justify-content:space-between;gap:12px}.font-size-control output{font-variant-numeric:tabular-nums;font-weight:700;color:var(--blue)}.font-size-control input[type=range]{width:100%;accent-color:var(--blue);padding:0}
+
+
+/* SUHAIS account access */
+.suhuis-auth-pending .app-shell,.suhuis-auth-pending #sidebarToggle{visibility:hidden}
+.auth-gate{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;padding:22px;background:radial-gradient(ellipse at top,#f5ead9,#e9dfd0 62%,#e1d5c5)}
+.auth-gate[hidden]{display:none!important}
+.auth-card{width:min(100%,430px);padding:clamp(24px,6vw,42px);border:1px solid #d8c4a7;border-radius:20px;background:#fffdf8;box-shadow:0 24px 70px #4d38231c;color:#30261e}
+.auth-mark{width:48px;height:48px;display:grid;place-items:center;margin:0 auto 18px;border-radius:14px;background:#79502f;color:#fff;font:700 26px Georgia,serif}
+.auth-card .eyebrow,.auth-card h1,.auth-card>.muted{text-align:center}
+.auth-card h1{font-size:30px;margin:8px 0}
+.auth-card form{display:grid;gap:9px;margin-top:24px}
+.auth-card label{font-weight:600;margin-top:5px}
+.auth-card input{width:100%;min-height:48px;padding:12px 14px;border:1px solid #d8cbb9;border-radius:9px;background:#fff;font:inherit;color:#30261e}
+.auth-card button{width:100%;min-height:46px;border-radius:9px}
+.auth-card .primary{margin-top:10px;background:#79502f;color:white;border:1px solid #79502f}
+.auth-wide{margin-top:12px}
+.auth-card .text-button{display:block;min-height:38px;margin:5px auto 0;border:0;background:transparent;color:#76502f;text-decoration:underline}
+.auth-card small{display:block;margin-top:16px;text-align:center;color:#75685c;line-height:1.5}
+.auth-message{min-height:22px;margin:10px 0 0;text-align:center;color:#315b43}
+.auth-message[data-error=true]{color:#a52d26}
+@media(max-width:520px){.auth-gate{padding:14px}.auth-card{padding:25px 20px;border-radius:16px}.auth-card h1{font-size:26px}}
