@@ -34,8 +34,7 @@ Set these environment variables in the hosting provider (do not commit secrets):
 - `GOOGLE_CLIENT_ID=` OAuth client ID
 - `GOOGLE_REDIRECT_URI=https://YOUR-DOMAIN/oauth2callback`
 - `YOUTUBE_API_KEY=` restricted YouTube Data API key
-- `OPENAI_API_KEY=` optional key for AI drafts
-- `OPENAI_MODEL=gpt-4.1-mini` optional model override
+- `- `OPENAI_MODEL=gpt-4.1-mini` optional model override
 
 Then install dependencies with `npm install` and start with `npm start`.
 
@@ -54,3 +53,8 @@ YouTube's API does not permit indiscriminate or repetitive spam commenting. Do n
 4. Run `npm start` and open `http://localhost:3000`.
 
 For local OAuth, add `http://localhost:3000/oauth2callback` to the OAuth client's authorized redirect URIs.
+
+
+## Free AI writing provider
+
+Positive Voice uses the Google Gemini API for AI drafting and collective commenting. Set `GEMINI_API_KEY` in the Render environment. The default model is `gemini-3.5-flash-lite`; optionally set `GEMINI_MODEL` to another model available to your Google AI Studio free-tier project. The free tier has provider-enforced rate and daily limits and is not unlimited. Free-tier prompts may be used by Google to improve its products; do not submit private or sensitive information. No OpenAI API key or OpenAI billing is required.
