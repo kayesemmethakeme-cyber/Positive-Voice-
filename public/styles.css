@@ -335,3 +335,11 @@ html[dir="rtl"] .app-main{margin-left:0!important;margin-right:252px!important}
  html[dir="rtl"] #appSidebar{left:auto!important;right:0!important;transform:translateX(110%)!important;visibility:hidden;transition:transform .22s ease,visibility .22s ease!important}
  html[dir="rtl"] #appSidebar.sidebar-open{transform:translateX(0)!important;visibility:visible}
 }
+
+/* Collapsible navigation categories */
+.nav-heading{width:100%;display:flex!important;align-items:center;justify-content:space-between;gap:8px;background:transparent;border:0;text-align:inherit;cursor:pointer;padding:0 10px 8px!important;color:#a17a4c!important;font-size:10px!important;font-weight:800!important;letter-spacing:.15em!important}
+.nav-heading .nav-chevron{font-size:16px;transition:transform .18s ease}
+.nav-group.collapsed .nav-chevron{transform:rotate(-90deg)}
+.nav-group.collapsed .nav-link{display:none!important}
+.nav-heading:focus-visible{outline:2px solid #b18a50;outline-offset:3px}
+html[dir="rtl"] .nav-heading{flex-direction:row-reverse}
