@@ -14,7 +14,19 @@ const missing = required.filter(k => !process.env[k]);
 const dataDir = path.join(__dirname, 'data');
 fs.mkdirSync(dataDir, { recursive: true });
 const dbFile = path.join(dataDir, 'positive-voice.json');
-function loadDb(){try{return JSON.parse(fs.readFileSync(dbFile,'utf8'))}catch{return {videos:{},batches:0}}}
+function loadDb(){
+  try { return JSON.parse(fs.readFileSync(dbFile,'utf8')); }
+  catch {
+    const initial = { videos: {}, batches: 0 };
+    // Preserve the old prototype's seen-video IDs during this upgrade.
+    try {
+      const old = JSON.parse(fs.readFileSync(path.join(dataDir,'discovery-state.json'),'utf8'));
+      for (const id of old.seenIds || []) initial.videos[id] = { videoId:id, firstSeenAt:new Date().toISOString(), status:'previously-discovered', published:false, drafts:[] };
+      initial.batches = old.batches || 0;
+    } catch {}
+    return initial;
+  }
+}
 let db=loadDb();
 function saveDb(){const tmp=dbFile+'.tmp';fs.writeFileSync(tmp,JSON.stringify(db));fs.renameSync(tmp,dbFile)}
 const publicYoutube=google.youtube({version:'v3',auth:process.env.YOUTUBE_API_KEY});
