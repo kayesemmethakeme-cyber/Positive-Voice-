@@ -1,5 +1,6 @@
 (function(){
   'use strict';
+  document.documentElement.classList.add('suhuis-auth-pending');
   const gate=document.getElementById('suhuisAuthGate');
   const form=document.getElementById('suhuisAuthForm');
   const message=document.getElementById('authMessage');
@@ -10,8 +11,8 @@
   const password=document.getElementById('authPassword');
   let mode='signin', client=null, currentUser=null, switching=false;
   const setMessage=(text,isError=false)=>{message.textContent=text;message.dataset.error=isError?'true':'false';};
-  const showGate=()=>{gate.hidden=false;document.querySelector('.app-shell')?.setAttribute('hidden','');document.getElementById('sidebarToggle')?.setAttribute('hidden','');};
-  const showApp=()=>{gate.hidden=true;document.querySelector('.app-shell')?.removeAttribute('hidden');document.getElementById('sidebarToggle')?.removeAttribute('hidden');};
+  const showGate=()=>{document.documentElement.classList.remove('suhuis-auth-pending');gate.hidden=false;document.querySelector('.app-shell')?.setAttribute('hidden','');document.getElementById('sidebarToggle')?.setAttribute('hidden','');};
+  const showApp=()=>{document.documentElement.classList.remove('suhuis-auth-pending');gate.hidden=true;document.querySelector('.app-shell')?.removeAttribute('hidden');document.getElementById('sidebarToggle')?.removeAttribute('hidden');};
   function setMode(next){
     mode=next;const signup=mode==='signup';
     title.textContent=signup?'Create your SUHAIS account':'Welcome to SUHAIS';
