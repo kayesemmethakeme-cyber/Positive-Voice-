@@ -30,7 +30,7 @@ function loadDb(){
 let db=loadDb();
 function saveDb(){const tmp=dbFile+'.tmp';fs.writeFileSync(tmp,JSON.stringify(db));fs.renameSync(tmp,dbFile)}
 const publicYoutube=google.youtube({version:'v3',auth:process.env.YOUTUBE_API_KEY});
-app.use(helmet({contentSecurityPolicy:false}));
+app.use(helmet({contentSecurityPolicy:false,crossOriginOpenerPolicy:{policy:'same-origin-allow-popups'}}));
 app.use(express.json({limit:'1mb'}));
 app.use(session({name:'pv.sid',secret:process.env.SESSION_SECRET||'development-only-change-me',proxy:true,resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:true,maxAge:8*60*60*1000}}));
 app.use(express.static(path.join(__dirname,'public')));
