@@ -211,4 +211,7 @@ Object.assign(M,{
   "Yemen": "یمن",
   "Zimbabwe": "زیمبابوه"
 });
+
+// Small labels used in the discovery header.
+Object.assign(M,{"01 · DISCOVERY":"۰۱ · یافتن"});
 })();
