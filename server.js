@@ -9,6 +9,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+app.set('trust proxy', 1); // Render terminates HTTPS at its proxy; required for secure session cookies.
 const PORT = process.env.PORT || 3000;
 const required = ['SESSION_SECRET','GOOGLE_CLIENT_ID','GOOGLE_REDIRECT_URI','YOUTUBE_API_KEY'];
 const missing = required.filter(k => !process.env[k]);
