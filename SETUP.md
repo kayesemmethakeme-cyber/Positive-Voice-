@@ -8,7 +8,8 @@ This is a deployable starter application, not a hosted website. It needs a Node.
 - Connects a user's YouTube account with server-side Google OAuth.
 - Optionally drafts a comment from the video's public title/description using an OpenAI API key.
 - Requires a separate, explicit confirmation for every comment submission.
-- Enforces a minimum 60-second interval between submissions and blocks repeat submissions to a video during the current server session.
+- Publishes approved comments sequentially with a five-second pause between submissions. YouTube quota and spam enforcement still apply.
+- Blocks an exact duplicate comment on the same video when that publication is already recorded.
 
 It does not bulk-post, run in the background, or claim to have watched a video. Metadata-based drafts must be checked by the user for accuracy.
 
@@ -19,6 +20,8 @@ It does not bulk-post, run in the background, or claim to have watched a video. 
 4. Create an OAuth client ID of type **Web application**.
 5. Add the deployed app's callback URL as an Authorized redirect URI: `https://YOUR-DOMAIN/oauth2callback`.
 6. Create an API key for public video search. Restrict it to YouTube Data API v3 and, where practical, your server's IP address.
+
+**Required for this implementation:** `GOOGLE_CLIENT_SECRET` must be the client secret belonging to the same Web application OAuth client as `GOOGLE_CLIENT_ID`. The redirect URI must exactly match `https://YOUR-DOMAIN/oauth2callback` in Google Cloud Console. Do not paste secrets into chat or commit them to GitHub.
 
 OAuth scope requested for account features: `youtube.readonly` and `youtube.force-ssl`. The latter is required to publish comments. Google may require verification before an app can be used broadly. Do not ask users for their Google password.
 
@@ -37,7 +40,7 @@ Set these environment variables in the hosting provider (do not commit secrets):
 
 Then install dependencies with `npm install` and start with `npm start`.
 
-For production, configure HTTPS, secure secret storage, monitoring, and a privacy policy. OAuth credentials are stored in an encrypted, HttpOnly, Secure, SameSite cookie so the connection survives page reloads and server restarts; the encryption key is `SESSION_SECRET`. Also attach a persistent disk/volume to the host and preserve the `data/discovery-state.json` file; otherwise the seen-video history will be lost when the server is rebuilt or moved. Review Google OAuth verification requirements and YouTube API Services policies before public release.
+For production, configure HTTPS, secure secret storage, monitoring, and a privacy policy. OAuth access and refresh tokens are stored in an AES-256-GCM encrypted, HttpOnly, Secure, SameSite cookie. The encryption key is derived from `SESSION_SECRET`; this allows the login to survive page reloads and server restarts without relying on Render's ephemeral filesystem. The video discovery database is still stored on disk, so attach a persistent disk/volume and preserve the `data/` directory or discovery history can be lost after a restart or redeploy. Review Google OAuth verification requirements and YouTube API Services policies before public release.
 
 ## 3. Open on an iPhone
 Once deployed, open your HTTPS domain in Safari → Share → Add to Home Screen. The app will then launch like an app. You can also use the website directly.
