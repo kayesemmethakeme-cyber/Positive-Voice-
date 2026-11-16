@@ -310,3 +310,18 @@ html[dir="rtl"] .about-principles ul{padding-right:20px;padding-left:0}
  html[dir="rtl"] .sidebar-toggle{left:auto;right:12px}
  html[dir="rtl"] .app-main{margin-right:0}
 }
+
+/* Locale direction: only RTL languages mirror the shell; LTR always restores the left rail. */
+html[dir="ltr"] .app-sidebar{left:0!important;right:auto!important;border-left:0!important;border-right:1px solid #b99560!important}
+html[dir="ltr"] .app-main{margin-left:252px!important;margin-right:0!important}
+html[dir="rtl"] .app-sidebar{left:auto!important;right:0!important;border-right:0!important;border-left:1px solid #b99560!important}
+html[dir="rtl"] .app-main{margin-left:0!important;margin-right:252px!important}
+@media(max-width:800px){
+ html[dir="ltr"] .app-sidebar{left:0!important;right:auto!important;transform:translateX(-105%)!important}
+ html[dir="ltr"] .app-sidebar.sidebar-open{transform:translateX(0)!important}
+ html[dir="ltr"] .sidebar-toggle{left:12px!important;right:auto!important}
+ html[dir="rtl"] .app-sidebar{left:auto!important;right:0!important;transform:translateX(105%)!important}
+ html[dir="rtl"] .app-sidebar.sidebar-open{transform:translateX(0)!important}
+ html[dir="rtl"] .sidebar-toggle{left:auto!important;right:12px!important}
+ html[dir="ltr"] .app-main,html[dir="rtl"] .app-main{margin-left:0!important;margin-right:0!important}
+}
