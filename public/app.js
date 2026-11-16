@@ -96,14 +96,14 @@ function applyAppearance(p){
  document.querySelectorAll('.about-en').forEach(e=>e.hidden=x.language==='fa');
  document.querySelectorAll('.about-fa').forEach(e=>e.hidden=x.language!=='fa');
  const lang=$('#appLanguage'),font=$('#appFont'),fontSizeInput=$('#appFontSize'),fontSizeValue=$('#appFontSizeValue'),wall=$('#appWallpaper'),orn=$('#appOrnament');
- if(lang)lang.value=x.language;if(font)font.value=x.font;if(fontSizeInput)fontSizeInput.value=String(fontSize);if(fontSizeValue)fontSizeValue.textContent=fontSize+' px';if(wall)wall.value=x.wallpaper;if(orn)orn.value=x.ornament;
+ if(lang)lang.value=x.language;if(font)font.value=x.font;if(fontSizeInput)fontSizeInput.value=String(fontSize);if(fontSizeValue)fontSizeValue.textContent=x.language==='fa'?new Intl.NumberFormat('fa').format(fontSize)+' پیکسل':fontSize+' px';if(wall)wall.value=x.wallpaper;if(orn)orn.value=x.ornament;
  const apply=$('#applyAppearance');if(apply){apply.textContent=x.language==='fa'?'به‌کاربستن نما':'Apply appearance';apply.disabled=true;apply.dataset.applied='true'}
 }
 function initAppearance(){
  let saved={};try{saved=JSON.parse(localStorage.getItem('suhuis-appearance-v1')||'{}')}catch(e){}
  applyAppearance(saved);
  ['appLanguage','appFont','appFontSize','appWallpaper','appOrnament'].forEach(id=>$('#'+id)?.addEventListener('change',()=>{const btn=$('#applyAppearance');if(btn){btn.disabled=false;btn.dataset.applied='false'}}));
- $('#appFontSize')?.addEventListener('input',e=>{const out=$('#appFontSizeValue');if(out)out.textContent=e.target.value+' px'}); $('#applyAppearance')?.addEventListener('click',()=>applyAppearance(appearanceChoice()));
+ $('#appFontSize')?.addEventListener('input',e=>{const out=$('#appFontSizeValue');if(out)out.textContent=(document.documentElement.lang==='fa'?new Intl.NumberFormat('fa').format(Number(e.target.value))+' پیکسل':e.target.value+' px')}); $('#applyAppearance')?.addEventListener('click',()=>applyAppearance(appearanceChoice()));
  $('#resetAppearance')?.addEventListener('click',()=>applyAppearance(appearanceDefaults));
 }
 function setupWorkspaceNavigation(){const composer=$('.collective-top'),studio=$('#comment-studio');if(composer&&studio&&!studio.contains(composer))studio.querySelector('.muted')?.after(composer);document.querySelectorAll('.nav-link[data-view]').forEach(e=>e.addEventListener('click',ev=>{ev.preventDefault();setWorkspaceView(e.dataset.view)}));document.querySelectorAll('[data-go]').forEach(e=>e.addEventListener('click',()=>setWorkspaceView(e.dataset.go)));setWorkspaceView('overview')}
