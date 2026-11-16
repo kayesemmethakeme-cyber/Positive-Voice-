@@ -42,3 +42,5 @@ footer{color:#8c7865}
 
 /* Advanced controls */
 .filters{grid-template-columns:repeat(2,minmax(0,1fr))}.central-composer .writing-options{grid-template-columns:repeat(2,minmax(0,1fr))}.central-composer input:not([type=checkbox]),.central-composer select{width:100%}.central-composer>input{margin-bottom:9px}.central-composer>textarea{margin-bottom:8px}@media(min-width:760px){.filters{grid-template-columns:repeat(4,minmax(0,1fr))}.central-composer .writing-options{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:380px){.central-composer .writing-options{grid-template-columns:1fr}.search-row{flex-wrap:wrap}.search-row button{width:100%}}
+
+.history-controls{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}.history-controls input,.history-controls select{width:100%}@media(min-width:650px){.history-controls{grid-template-columns:2fr 1fr}}
