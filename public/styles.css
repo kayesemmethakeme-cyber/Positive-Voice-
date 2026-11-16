@@ -115,3 +115,13 @@ body[data-ornament="visible"]:before{opacity:.27}
 .about-language[dir="rtl"]{font-family:var(--app-font,Georgia,serif);text-align:right;line-height:2}
 .about-language[dir="rtl"] .about-grid{direction:rtl}
 @media(max-width:560px){.custom-grid{grid-template-columns:1fr}}
+
+/* Final visible-but-gentle botanical treatment. The previous faint default hid the artwork. */
+body:before{content:"";position:fixed;inset:0;display:block;z-index:0;pointer-events:none;background-image:url('/botanical-ornament.svg');background-position:center top;background-size:100% 100%;background-repeat:no-repeat;opacity:.18;mix-blend-mode:multiply}
+body[data-ornament="faint"]:before{opacity:.10}
+body[data-ornament="soft"]:before{opacity:.18}
+body[data-ornament="visible"]:before{opacity:.27}
+body[data-ornament="none"]:before{display:none}
+.app-shell,.app-main,main,header{position:relative;z-index:1}
+.panel,.notice,.video,.draft-card,.history-row{background-color:rgba(255,251,246,.78)}
+@media(max-width:700px){body:before{background-size:auto 100%;background-position:center top;opacity:.19}.panel,.notice{background-color:rgba(255,251,246,.76)}}
