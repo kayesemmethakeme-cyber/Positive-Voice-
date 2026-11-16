@@ -37,3 +37,5 @@ input[type=checkbox]{accent-color:#a87335}
 #toast{background:#54351f}
 footer{color:#8c7865}
 @media(max-width:420px){.header-tools{gap:5px}.header-refresh{padding:7px 8px;font-size:11px}.pill{font-size:10px;padding:4px 7px}}
+
+.history-edit-label{display:block;margin:10px 0 5px;color:#684326}.history-edit-text{min-height:76px;font-size:13px}.history-save-edit{margin-top:7px}
