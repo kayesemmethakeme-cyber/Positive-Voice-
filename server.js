@@ -4,260 +4,37 @@ const session = require('express-session');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { google } = require('googleapis');
-const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
-
 const app = express();
-app.set('trust proxy', 1); // Render terminates HTTPS at its proxy; required for secure session cookies.
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 const required = ['SESSION_SECRET','GOOGLE_CLIENT_ID','GOOGLE_REDIRECT_URI','YOUTUBE_API_KEY'];
 const missing = required.filter(k => !process.env[k]);
-const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
-const youtubePublic = google.youtube({ version: 'v3', auth: process.env.YOUTUBE_API_KEY });
-const published = new Map();
-let lastPublishAt = 0;
 const dataDir = path.join(__dirname, 'data');
-const discoveryFile = path.join(dataDir, 'discovery-state.json');
 fs.mkdirSync(dataDir, { recursive: true });
-function loadDiscoveryState() {
-  try { return JSON.parse(fs.readFileSync(discoveryFile, 'utf8')); }
-  catch { return { seenIds: [], nextPageToken: null, batches: 0 }; }
-}
-let discoveryState = loadDiscoveryState();
-function saveDiscoveryState() {
-  const temp = discoveryFile + '.tmp';
-  fs.writeFileSync(temp, JSON.stringify(discoveryState));
-  fs.renameSync(temp, discoveryFile);
-}
-
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(express.json({ limit: '100kb' }));
-app.use(session({
-  name: 'pv.sid', secret: process.env.SESSION_SECRET || 'development-only-change-me',
-  proxy: true, resave: false, saveUninitialized: false,
-  cookie: { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 8 * 60 * 60 * 1000 }
-}));
-app.use(express.static(path.join(__dirname, 'public')));
-const apiLimiter = rateLimit({ windowMs: 60_000, limit: 30, standardHeaders: 'draft-7', legacyHeaders: false });
-app.use('/api', apiLimiter);
-
-function ensureConfigured(req, res, next) {
-  if (missing.length) return res.status(503).json({ error: 'The app still needs its Google Cloud settings.', missing });
-  next();
-}
-function ensureAuth(req, res, next) {
-  if (!req.session.tokens) return res.status(401).json({ error: 'Connect your YouTube account first.' });
-  oauth2Client.setCredentials(req.session.tokens);
-  next();
-}
-
-app.get('/api/status', (req, res) => res.json({
-  configured: missing.length === 0,
-  missing,
-  connected: Boolean(req.session.tokens),
-  channel: req.session.channel || null,
-  aiConfigured: Boolean(process.env.OPENAI_API_KEY),
-  mode: 'individual-approval'
-}));
-
-const pendingOAuth = new Map();
-function createOAuthState() {
-  const nonce = crypto.randomBytes(24).toString('hex');
-  const payload = Buffer.from(JSON.stringify({ t: Date.now(), n: nonce })).toString('base64url');
-  const signature = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(payload).digest('base64url');
-  pendingOAuth.set(nonce, Date.now());
-  return payload + '.' + signature;
-}
-function consumeOAuthState(state) {
-  if (typeof state !== 'string') return false;
-  const parts = state.split('.');
-  if (parts.length !== 2) return false;
-  const expected = crypto.createHmac('sha256', process.env.SESSION_SECRET).update(parts[0]).digest();
-  let supplied;
-  try { supplied = Buffer.from(parts[1], 'base64url'); } catch { return false; }
-  if (supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) return false;
-  try {
-    const payload = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
-    const createdAt = pendingOAuth.get(payload.n);
-    if (!Number.isFinite(payload.t) || !createdAt || createdAt !== payload.t ||
-        Date.now() - payload.t < 0 || Date.now() - payload.t >= 10 * 60 * 1000) return false;
-    pendingOAuth.delete(payload.n);
-    return true;
-  } catch { return false; }
-}
-app.post('/auth/google/token', ensureConfigured, async (req, res) => {
-  try {
-    if (req.get('X-Requested-With') !== 'XmlHttpRequest') {
-      return res.status(400).json({ error: 'Invalid Google sign-in request.' });
-    }
-    const accessToken = String(req.body?.access_token || '');
-    if (!accessToken) return res.status(400).json({ error: 'Google did not return an access token.' });
-    const auth = new google.auth.OAuth2();
-    auth.setCredentials({ access_token: accessToken });
-    const yt = google.youtube({ version: 'v3', auth });
-    const me = await yt.channels.list({ part: ['snippet'], mine: true });
-    const channel = me.data.items?.[0];
-    if (!channel) return res.status(403).json({ error: 'Google authorized the account, but no YouTube channel was returned.' });
-    req.session.tokens = { access_token: accessToken, expiry_date: Date.now() + 55 * 60 * 1000 };
-    req.session.channel = { id: channel.id, title: channel.snippet?.title };
-    req.session.save(err => {
-      if (err) return res.status(500).json({ error: 'YouTube connected, but the app could not save your login session.' });
-      res.json({ ok: true, channel: req.session.channel });
-    });
-  } catch (e) {
-    console.error('Google token validation:', e.message);
-    res.status(401).json({ error: 'Google access token could not be verified: ' + e.message });
-  }
-});
-
-app.get('/api/oauth-config', ensureConfigured, (req, res) => {
-  res.json({ clientId: process.env.GOOGLE_CLIENT_ID, redirectUri: process.env.GOOGLE_REDIRECT_URI, state: createOAuthState() });
-});
-
-app.get('/oauth2callback', ensureConfigured, async (req, res) => {
-  try {
-    if (!consumeOAuthState(String(req.query.state || ''))) {
-      return res.status(400).send('Google sign-in state is invalid or expired. Return to Positive Voice and connect again.');
-    }
-    if (req.query.error) return res.status(400).send('Google authorization was not completed: ' + String(req.query.error));
-    if (!req.query.code) return res.status(400).send('Google did not return an authorization code. Please try connecting again.');
-    const body = new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      code: String(req.query.code),
-      grant_type: 'authorization_code',
-      redirect_uri: process.env.GOOGLE_REDIRECT_URI
-    });
-    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body
-    });
-    const tokenData = await tokenResponse.json();
-    if (!tokenResponse.ok) {
-      console.error('OAuth token exchange:', tokenData.error, tokenData.error_description);
-      return res.status(502).send('Google token exchange failed: ' + String(tokenData.error_description || tokenData.error || 'unknown error'));
-    }
-    const tokens = {
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      scope: tokenData.scope,
-      token_type: tokenData.token_type,
-      expiry_date: Date.now() + Number(tokenData.expires_in || 3600) * 1000
-    };
-    oauth2Client.setCredentials(tokens);
-    const yt = google.youtube({ version: 'v3', auth: oauth2Client });
-    const me = await yt.channels.list({ part: ['snippet'], mine: true });
-    const channel = me.data.items?.[0];
-    req.session.tokens = tokens;
-    req.session.channel = channel ? { id: channel.id, title: channel.snippet?.title } : { title: 'Connected YouTube account' };
-    req.session.save(err => {
-      if (err) return res.status(500).send('YouTube connected, but the app could not save your login session. Please try again.');
-      res.redirect('/?connected=1');
-    });
-  } catch (e) {
-    console.error('OAuth callback:', e.message);
-    res.status(500).send('Could not connect YouTube. Check the server logs for the OAuth callback error.');
-  }
-});
-app.post('/auth/logout', (req, res) => req.session.destroy(() => res.json({ ok: true })));
-
-app.post('/api/discover', async (req, res) => {
-  try {
-    const requested = Number(req.body?.limit) || 100;
-    const limit = Math.min(Math.max(Math.floor(requested), 1), 100);
-    const seen = new Set(discoveryState.seenIds);
-    const videos = [];
-    let pageToken = discoveryState.nextPageToken || undefined;
-    let pagesChecked = 0;
-    // YouTube returns at most 50 search results per page. Continue through
-    // pages until this batch is full or the current result stream is exhausted.
-    while (videos.length < limit && pagesChecked < 12) {
-      const params = {
-        part: ['snippet'], type: ['video'], maxResults: 50,
-        order: 'date', safeSearch: 'moderate', regionCode: 'US'
-      };
-      if (pageToken) params.pageToken = pageToken;
-      const result = await youtubePublic.search.list(params);
-      pagesChecked += 1;
-      for (const item of (result.data.items || [])) {
-        const id = item.id?.videoId;
-        if (!id || seen.has(id)) continue;
-        const snippet = item.snippet || {};
-        videos.push({
-          id, title: snippet.title || 'Untitled video', channelId: snippet.channelId,
-          channel: snippet.channelTitle || 'Unknown channel',
-          description: (snippet.description || '').slice(0, 900),
-          publishedAt: snippet.publishedAt,
-          thumbnail: snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url,
-          url: `https://www.youtube.com/watch?v=${id}`
-        });
-        seen.add(id);
-        if (videos.length >= limit) break;
-      }
-      pageToken = result.data.nextPageToken || undefined;
-      if (!pageToken) break;
-    }
-    // Record every video shown in a discovery batch so future batches exclude it,
-    // even if the user does not prepare or publish a comment for it.
-    discoveryState = {
-      seenIds: Array.from(seen),
-      nextPageToken: pageToken || null,
-      batches: (discoveryState.batches || 0) + 1
-    };
-    saveDiscoveryState();
-    res.json({
-      videos, requested: limit, returned: videos.length,
-      totalRemembered: discoveryState.seenIds.length,
-      batches: discoveryState.batches,
-      exhausted: videos.length < limit,
-      note: videos.length < limit ? 'The current YouTube discovery stream had fewer unseen videos available. New uploads may appear on a later discovery.' : null
-    });
-  } catch (e) {
-    console.error('Discovery:', e.message);
-    res.status(500).json({ error: 'Could not discover videos. Check the YouTube API key, quota, and server connection.' });
-  }
-});
-
-app.get('/api/discovery-stats', (req, res) => res.json({
-  totalRemembered: discoveryState.seenIds.length,
-  batches: discoveryState.batches || 0
-}));
-app.post('/api/draft', async (req, res) => {
-  const { title, channel, description, style } = req.body || {};
-  if (!title || !channel) return res.status(400).json({ error: 'Video title and channel are required.' });
-  if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'Add OPENAI_API_KEY to enable AI-generated drafts. You can still write comments manually.' });
-  try {
-    const prompt = `Write one concise, genuinely useful, positive YouTube comment based only on the supplied video metadata. Do not pretend to have watched the video. Do not make claims about unseen content. Avoid generic praise, promotion, links, calls to action, hashtags, repeated templates, or mentioning AI. If metadata is too thin to support a meaningful observation, ask a thoughtful, relevant question instead. Keep it natural, specific, respectful, and under 65 words. Style: ${style || 'thoughtful, warm, and articulate'}.\nVideo title: ${title}\nChannel: ${channel}\nDescription: ${description || '(none)'}`;
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST', headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4.1-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.7, max_tokens: 130 })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error?.message || 'AI request failed');
-    res.json({ comment: data.choices?.[0]?.message?.content?.trim() || '' });
-  } catch (e) { console.error(e.message); res.status(500).json({ error: 'Could not generate a draft. Check the AI key and model access.' }); }
-});
-
-app.post('/api/publish', ensureConfigured, ensureAuth, async (req, res) => {
-  const { videoId, channelId, comment, userConfirmed } = req.body || {};
-  const text = String(comment || '').trim();
-  if (userConfirmed !== true) return res.status(400).json({ error: 'Explicit approval is required for every individual comment.' });
-  if (!videoId || !channelId || text.length < 3 || text.length > 1000) return res.status(400).json({ error: 'Check the video and comment text (3–1,000 characters).' });
-  if (Date.now() - lastPublishAt < 60_000) return res.status(429).json({ error: 'Please wait at least 60 seconds between individual publications.' });
-  const key = `${req.session.channel?.id || 'user'}:${videoId}`;
-  if (published.has(key)) return res.status(409).json({ error: 'This account has already published a comment to this video in this app session.' });
-  try {
-    const yt = google.youtube({ version: 'v3', auth: oauth2Client });
-    const result = await yt.commentThreads.insert({ part: ['snippet'], requestBody: { snippet: { channelId, videoId, topLevelComment: { snippet: { textOriginal: text } } } } });
-    published.set(key, result.data.id);
-    lastPublishAt = Date.now();
-    res.json({ ok: true, commentId: result.data.id, videoUrl: `https://www.youtube.com/watch?v=${videoId}` });
-  } catch (e) {
-    console.error('Publish:', e.message);
-    res.status(500).json({ error: 'YouTube did not accept this comment. It may be disabled, restricted, or your account may lack permission.' });
-  }
-});
-
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.listen(PORT, () => console.log(`Positive Voice running on port ${PORT}`));
+const dbFile = path.join(dataDir, 'positive-voice.json');
+function loadDb(){try{return JSON.parse(fs.readFileSync(dbFile,'utf8'))}catch{return {videos:{},batches:0}}}
+let db=loadDb();
+function saveDb(){const tmp=dbFile+'.tmp';fs.writeFileSync(tmp,JSON.stringify(db));fs.renameSync(tmp,dbFile)}
+const publicYoutube=google.youtube({version:'v3',auth:process.env.YOUTUBE_API_KEY});
+app.use(helmet({contentSecurityPolicy:false}));
+app.use(express.json({limit:'1mb'}));
+app.use(session({name:'pv.sid',secret:process.env.SESSION_SECRET||'development-only-change-me',proxy:true,resave:false,saveUninitialized:false,cookie:{httpOnly:true,sameSite:'lax',secure:true,maxAge:8*60*60*1000}}));
+app.use(express.static(path.join(__dirname,'public')));
+app.use('/api',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-7',legacyHeaders:false}));
+function ensureConfigured(req,res,next){if(missing.length)return res.status(503).json({error:'Server configuration is incomplete.',missing});next()}
+function recordFor(id){if(!db.videos[id])db.videos[id]={videoId:id,firstSeenAt:new Date().toISOString(),status:'discovered',published:false,drafts:[]};return db.videos[id]}
+function ensureAuth(req,res,next){if(!req.session.tokens?.access_token)return res.status(401).json({error:'Connect your YouTube account first.'});if(req.session.tokens.expiry_date&&req.session.tokens.expiry_date<Date.now()+30000)return res.status(401).json({error:'Your YouTube connection has expired. Reconnect your account.'});const auth=new google.auth.OAuth2();auth.setCredentials(req.session.tokens);req.youtube=google.youtube({version:'v3',auth});next()}
+app.get('/api/status',(req,res)=>res.json({configured:missing.length===0,missing,connected:Boolean(req.session.tokens?.access_token),channel:req.session.channel||null,aiConfigured:Boolean(process.env.OPENAI_API_KEY),historyCount:Object.keys(db.videos).length,batches:db.batches||0}));
+app.get('/api/oauth-config',ensureConfigured,(req,res)=>res.json({clientId:process.env.GOOGLE_CLIENT_ID}));
+app.post('/auth/google/token',ensureConfigured,async(req,res)=>{try{if(req.get('X-Requested-With')!=='XmlHttpRequest')return res.status(400).json({error:'Invalid Google sign-in request.'});const accessToken=String(req.body?.access_token||'');if(!accessToken)return res.status(400).json({error:'Google did not return an access token.'});const auth=new google.auth.OAuth2();auth.setCredentials({access_token:accessToken});const yt=google.youtube({version:'v3',auth});const me=await yt.channels.list({part:['snippet'],mine:true});const channel=me.data.items?.[0];if(!channel)return res.status(403).json({error:'Google authorized the account, but no YouTube channel was returned.'});req.session.tokens={access_token:accessToken,expiry_date:Date.now()+55*60*1000};req.session.channel={id:channel.id,title:channel.snippet?.title};req.session.save(err=>{if(err)return res.status(500).json({error:'YouTube login could not be saved. Please reconnect.'});res.json({ok:true,channel:req.session.channel})})}catch(e){console.error('Google token validation:',e.message);res.status(401).json({error:'Google could not verify the YouTube connection: '+e.message})}});
+app.post('/auth/logout',(req,res)=>req.session.destroy(()=>res.json({ok:true})));
+app.post('/api/discover',async(req,res)=>{try{const query=String(req.body?.query||'').trim().slice(0,200);const requested=Math.min(Math.max(Number(req.body?.limit)||100,1),1000);const order=['relevance','date','viewCount','rating'].includes(req.body?.order)?req.body.order:'relevance';const filter=req.body?.filter||'all';const maxPages=Math.min(40,Math.ceil(requested/50)+8);let pageToken;const found=[];const scanned=new Set();let pages=0;while(found.length<requested&&pages<maxPages){const params={part:['snippet'],type:['video'],maxResults:50,order,safeSearch:'moderate',regionCode:'US'};if(query)params.q=query;if(pageToken)params.pageToken=pageToken;const response=await publicYoutube.search.list(params);pages++;const items=response.data.items||[];const ids=items.map(x=>x.id?.videoId).filter(Boolean);const statsResponse=ids.length?await publicYoutube.videos.list({part:['statistics','contentDetails'],id:ids}):{data:{items:[]}};const stats=new Map((statsResponse.data.items||[]).map(v=>[v.id,v]));for(const item of items){const id=item.id?.videoId;if(!id||scanned.has(id))continue;scanned.add(id);const prior=db.videos[id];if(filter==='new'&&prior)continue;if(filter==='uncommented'&&prior?.published)continue;if(filter==='commented'&&!prior?.published)continue;const s=item.snippet||{};const st=stats.get(id);const n=st?.statistics||{};found.push({id,title:s.title||'Untitled video',channelId:s.channelId,channel:s.channelTitle||'Unknown channel',description:(s.description||'').slice(0,3000),publishedAt:s.publishedAt,thumbnail:s.thumbnails?.medium?.url||s.thumbnails?.default?.url,url:'https://www.youtube.com/watch?v='+id,views:Number(n.viewCount||0),likes:Number(n.likeCount||0),comments:Number(n.commentCount||0),duration:st?.contentDetails?.duration||null,historyStatus:prior?.published?'commented':prior?'previously-discovered':'new'});if(found.length>=requested)break}pageToken=response.data.nextPageToken;if(!pageToken)break}for(const v of found){const rec=recordFor(v.id);rec.lastSeenAt=new Date().toISOString();rec.title=v.title;rec.channel=v.channel}db.batches=(db.batches||0)+1;saveDb();const sortBy=req.body?.sortBy;if(['views','likes','comments'].includes(sortBy)){const dir=req.body?.direction==='asc'?1:-1;found.sort((a,b)=>(a[sortBy]-b[sortBy])*dir)}res.json({videos:found,requested,returned:found.length,pages,batches:db.batches,totalRemembered:Object.keys(db.videos).length,exhausted:found.length<requested})}catch(e){console.error('Discovery:',e.message);res.status(500).json({error:e.message?.toLowerCase().includes('quota')?'YouTube API quota reached. Try after the quota resets.':'Video discovery failed. Check search terms and YouTube API configuration.'})}});
+app.get('/api/history',(req,res)=>{const items=Object.values(db.videos).map(v=>({...v,historyStatus:v.published?'commented':v.status}));res.json({items,total:items.length,commented:items.filter(x=>x.published).length,discovered:items.filter(x=>!x.published).length})});
+app.post('/api/draft',async(req,res)=>{const {title,channel,description,style}=req.body||{};if(!title||!channel)return res.status(400).json({error:'Video title and channel are required.'});if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'AI is not configured. Add OPENAI_API_KEY in the existing hosting environment settings.'});try{const prompt='Write one thoughtful, positive, specific YouTube comment based ONLY on public metadata. Do not claim to have watched the video. Avoid generic praise, repetitive phrasing, promotion, links or unsupported claims. If metadata is insufficient, ask a relevant question. Under 65 words. Style: '+(style||'warm, articulate and constructive')+'\nTitle: '+title+'\nChannel: '+channel+'\nDescription: '+(description||'(none)');const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-4.1-mini',messages:[{role:'user',content:prompt}],temperature:.65,max_tokens:160})});const data=await response.json();if(!response.ok)throw new Error(data.error?.message||'AI request failed');const comment=data.choices?.[0]?.message?.content?.trim()||'';if(req.body.id){const rec=recordFor(String(req.body.id));rec.drafts=rec.drafts||[];rec.drafts.push({comment,createdAt:new Date().toISOString()});rec.status='drafted';saveDb()}res.json({comment})}catch(e){console.error('AI draft:',e.message);res.status(500).json({error:'AI drafting failed: '+e.message})}});
+app.post('/api/improve',async(req,res)=>{const {comment,instruction,videoTitle}=req.body||{};if(!String(comment||'').trim())return res.status(400).json({error:'Enter a comment to improve.'});if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'AI improvement requires OPENAI_API_KEY in server settings.'});try{const prompt='Improve this YouTube comment. Preserve meaning and factual limits. Correct grammar, clarity, flow and naturalness. Keep relevant, respectful, non-promotional and under 65 words. Do not invent that the writer watched the video. Instruction: '+(instruction||'Make clearer and more thoughtful.')+'\nVideo: '+(videoTitle||'not supplied')+'\nComment: '+comment;const response=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({model:process.env.OPENAI_MODEL||'gpt-4.1-mini',messages:[{role:'user',content:prompt}],temperature:.4,max_tokens:180})});const data=await response.json();if(!response.ok)throw new Error(data.error?.message||'AI request failed');res.json({comment:data.choices?.[0]?.message?.content?.trim()||''})}catch(e){res.status(500).json({error:'AI improvement failed: '+e.message})}});
+app.post('/api/publish',ensureConfigured,ensureAuth,async(req,res)=>{const {videoId,comment,userConfirmed}=req.body||{};const text=String(comment||'').trim();if(userConfirmed!==true)return res.status(400).json({error:'Explicit approval is required.'});if(!videoId||text.length<3||text.length>1000)return res.status(400).json({error:'Comment must be 3–1,000 characters.'});const rec=recordFor(videoId);if(rec.published)return res.status(409).json({error:'Positive Voice already recorded a successful comment on this video.'});try{const result=await req.youtube.commentThreads.insert({part:['snippet'],requestBody:{snippet:{videoId,topLevelComment:{snippet:{textOriginal:text}}}}});rec.published=true;rec.status='commented';rec.commentId=result.data.id;rec.publishedAt=new Date().toISOString();rec.commentText=text;saveDb();res.json({ok:true,commentId:result.data.id,videoUrl:'https://www.youtube.com/watch?v='+videoId})}catch(e){console.error('Publish:',e.response?.data||e.message);const reason=e.response?.data?.error?.errors?.[0]?.reason;res.status(502).json({error:reason==='commentsDisabled'?'Comments are disabled for this video.':reason==='forbidden'?'YouTube denied permission to comment on this video.':'YouTube rejected the comment: '+(e.response?.data?.error?.message||e.message)})}});
+app.get('/api/health',(req,res)=>res.json({ok:true,version:'2.0.0'}));
+app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
+app.listen(PORT,()=>console.log('Positive Voice running on port '+PORT));
