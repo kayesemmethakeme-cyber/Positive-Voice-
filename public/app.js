@@ -90,7 +90,7 @@ function appearanceChoice(){return {language:$('#appLanguage')?.value||'en',font
 function applyAppearance(p){
  const x={...appearanceDefaults,...p};
  // Save first: changing from Persian to English reloads the page to restore original English text.
- try{localStorage.setItem('suhuis-appearance-v1',JSON.stringify(x))}catch(e){}
+ try{localStorage.setItem('suhuis-appearance-v1:'+String(window.suhuisUser?.id||'signed-out'),JSON.stringify(x))}catch(e){}
  document.documentElement.style.setProperty('--app-font',x.font); const fontSize=Math.min(24,Math.max(12,Number(x.fontSize)||16));document.documentElement.style.setProperty('--app-font-scale',String(fontSize/16));
  document.body.dataset.wallpaper=x.wallpaper;document.body.dataset.ornament=x.ornament;
  // The locale controller owns lang, dir and the transition between translated and source text.
@@ -103,7 +103,7 @@ function applyAppearance(p){
  const apply=$('#applyAppearance');if(apply){apply.textContent=x.language==='fa'?'به‌کاربستن نما':'Apply appearance';apply.disabled=true;apply.dataset.applied='true'}
 }
 function initAppearance(){
- let saved={};try{saved=JSON.parse(localStorage.getItem('suhuis-appearance-v1')||'{}')}catch(e){}
+ let saved={};try{saved=JSON.parse(localStorage.getItem('suhuis-appearance-v1:'+String(window.suhuisUser?.id||'signed-out'))||'{}')}catch(e){}
  applyAppearance(saved);
  ['appLanguage','appFont','appFontSize','appWallpaper','appOrnament'].forEach(id=>$('#'+id)?.addEventListener('change',()=>{const btn=$('#applyAppearance');if(btn){btn.disabled=false;btn.dataset.applied='false'}}));
  $('#appFontSize')?.addEventListener('input',e=>{const out=$('#appFontSizeValue');if(out)out.textContent=(document.documentElement.lang==='fa'?new Intl.NumberFormat('fa').format(Number(e.target.value))+' پیکسل':e.target.value+' px')}); $('#applyAppearance')?.addEventListener('click',()=>applyAppearance(appearanceChoice()));
