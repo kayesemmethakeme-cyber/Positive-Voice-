@@ -34,7 +34,7 @@
       const {data,error}=await client.auth.getSession();
       if(error)throw error;
       currentUser=data.session?.user||null;
-      if(location.hash.includes('type=recovery')||location.hash.includes('reset-password')){showGate();setMode('update');}
+      if(location.hash.includes('type=recovery')||location.hash.includes('reset-password')){window.suhuisUser=currentUser;showGate();setMode('update');}
       else if(currentUser){showApp();window.suhuisUser=currentUser;window.dispatchEvent(new CustomEvent('suhuis:authenticated',{detail:{user:currentUser}}));}
       else showGate();
       client.auth.onAuthStateChange((event,session)=>{
@@ -54,7 +54,7 @@
     try{
       if(mode==='update'){
         const {error}=await client.auth.updateUser({password:pass});if(error)throw error;
-        setMessage('Your password has been updated. Opening your workspace…');
+        setMessage('Your password has been updated. Opening your workspace…');showApp();history.replaceState(null,'',location.pathname+location.search);
       }else if(mode==='signup'){
         const {data,error}=await client.auth.signUp({email,password:pass,options:{emailRedirectTo:location.origin}});
         if(error)throw error;
