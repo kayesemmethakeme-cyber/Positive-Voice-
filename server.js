@@ -9,7 +9,7 @@ const fs = require('fs');
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-const required = ['SESSION_SECRET','GOOGLE_CLIENT_ID','GOOGLE_REDIRECT_URI','YOUTUBE_API_KEY'];
+const required = ['GOOGLE_CLIENT_ID','YOUTUBE_API_KEY'];
 const missing = required.filter(k => !process.env[k]);
 const dataDir = path.join(__dirname, 'data');
 fs.mkdirSync(dataDir, { recursive: true });
