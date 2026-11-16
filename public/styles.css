@@ -94,3 +94,24 @@ body:before{background-image:url('/botanical-ornament.svg'),radial-gradient(elli
 body{background-color:#faf5ee;background-image:radial-gradient(ellipse at 50% 4%,rgba(255,253,248,.98),rgba(249,243,235,.96) 62%,rgba(244,235,224,.96));}
 .panel,.notice,.video,.draft-card{background-color:rgba(255,252,248,.90);box-shadow:0 5px 20px rgba(104,67,38,.045)}
 .hero>p:not(.eyebrow),.fine,.muted{color:#88796d}
+
+/* User-selectable SUHAIS appearance */
+body{font-family:var(--app-font,Georgia,serif)}
+body[data-wallpaper="parchment"]{background-color:#faf5ee}
+body[data-wallpaper="garden"]{background-color:#f4eee5;background-image:radial-gradient(ellipse at 15% 12%,rgba(183,127,128,.13),transparent 42%),radial-gradient(ellipse at 85% 78%,rgba(126,139,105,.12),transparent 45%),linear-gradient(135deg,#f6eee3,#fbf7ef)}
+body[data-wallpaper="plain"]{background:#f8f6f1}
+body[data-wallpaper="rose"]{background-color:#f8efed;background-image:linear-gradient(135deg,#fbf3f0,#f2e4e1)}
+body[data-ornament="none"]:before{display:none}
+body[data-ornament="faint"]:before{opacity:.07}
+body[data-ornament="soft"]:before{opacity:.16}
+body[data-ornament="visible"]:before{opacity:.27}
+.connection-action{cursor:pointer;font:inherit}
+.connection-action:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.settings-customize{border:1px solid #dfc9bc;border-radius:15px;padding:16px;margin:16px 0;background:rgba(255,250,246,.8)}
+.settings-customize h3{font-family:Georgia,serif;color:#76503a;margin:0 0 5px}
+.custom-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.custom-grid>div{min-width:0}.custom-grid select{width:100%}
+.about-language[hidden]{display:none!important}
+.about-language[dir="rtl"]{font-family:var(--app-font,Georgia,serif);text-align:right;line-height:2}
+.about-language[dir="rtl"] .about-grid{direction:rtl}
+@media(max-width:560px){.custom-grid{grid-template-columns:1fr}}
