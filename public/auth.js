@@ -39,9 +39,9 @@
       else showGate();
       client.auth.onAuthStateChange((event,session)=>{
         const next=session?.user||null;
-        if(event==='SIGNED_OUT'){currentUser=null;window.suhuisUser=null;showGate();return;}
+        if(event==='SIGNED_OUT'){currentUser=null;window.suhuisUser=null;location.reload();return;}
         if(next&&currentUser&&next.id!==currentUser.id){switching=true;location.reload();return;}
-        if(next&&!currentUser){currentUser=next;window.suhuisUser=next;showApp();window.dispatchEvent(new CustomEvent('suhuis:authenticated',{detail:{user:next}}));}
+        if(next&&!currentUser){currentUser=next;window.suhuisUser=next;location.reload();}
       });
     }catch(error){showGate();setMessage(error.message||'Could not initialize account access.',true);}
   }
