@@ -28,30 +28,42 @@ function loadDb(){
     return initial;
   }
 }
-// Keep legacy shared data untouched. Authenticated accounts receive isolated files.
+// User data is stored in Supabase with the signed-in user's JWT.
+// RLS on public.user_workspace enforces ownership; no service-role key is used.
 const { AsyncLocalStorage } = require('async_hooks');
 const userContext = new AsyncLocalStorage();
 function emptyUserDb(){return { videos:{}, batches:0 };}
-function userDbFile(userId){
-  if(!/^[0-9a-f-]{36}$/i.test(String(userId||''))) throw new Error('Invalid authenticated user ID.');
-  const dir=path.join(dataDir,'users');fs.mkdirSync(dir,{recursive:true});
-  return path.join(dir,String(userId)+'.json');
+function supabaseRequestHeaders(accessToken){
+  const key=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
+  if(!process.env.SUPABASE_URL||!key)throw new Error('Supabase URL and publishable key must be configured on the server.');
+  return {apikey:key,Authorization:'Bearer '+accessToken,'Content-Type':'application/json'};
 }
-function loadUserDb(userId){
-  const file=userDbFile(userId);
-  try { const value=JSON.parse(fs.readFileSync(file,'utf8')); if(!value||typeof value!=='object'||!value.videos||typeof value.videos!=='object') return emptyUserDb(); return value; }
-  catch(error){ if(error.code!=='ENOENT') console.error('User workspace read failed:',error.message); return emptyUserDb(); }
+async function loadUserDb(userId,accessToken){
+  const base=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
+  const query='?select=payload&user_id=eq.'+encodeURIComponent(userId)+'&record_type=eq.history&record_key=eq.app-state&limit=1';
+  const response=await fetch(base+'/rest/v1/user_workspace'+query,{headers:supabaseRequestHeaders(accessToken),signal:AbortSignal.timeout(12000)});
+  if(!response.ok)throw new Error('Supabase workspace read failed (HTTP '+response.status+').');
+  const rows=await response.json();
+  const payload=rows?.[0]?.payload;
+  if(!payload||typeof payload!=='object')return emptyUserDb();
+  return {videos:payload.videos&&typeof payload.videos==='object'?payload.videos:{},batches:Number(payload.batches)||0};
 }
 const db = new Proxy({}, {
   get(_target,key){const store=userContext.getStore();return store?.db?.[key];},
   set(_target,key,value){const store=userContext.getStore();if(!store)throw new Error('No authenticated workspace context.');store.db[key]=value;return true;}
 });
-function saveDb(){
+async function saveDb(){
   const store=userContext.getStore();
   if(!store)throw new Error('No authenticated workspace context.');
-  const tmp=store.file+'.tmp';fs.writeFileSync(tmp,JSON.stringify(store.db));fs.renameSync(tmp,store.file);
-}
-const publicYoutube=google.youtube({version:'v3',auth:process.env.YOUTUBE_API_KEY});
+  const base=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
+  const response=await fetch(base+'/rest/v1/user_workspace?on_conflict=user_id,record_type,record_key',{
+    method:'POST',
+    headers:{...supabaseRequestHeaders(store.accessToken),Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify({user_id:store.userId,record_type:'history',record_key:'app-state',payload:{videos:store.db.videos,batches:store.db.batches||0}}),
+    signal:AbortSignal.timeout(12000)
+  });
+  if(!response.ok)throw new Error('Supabase workspace save failed (HTTP '+response.status+').');
+}const publicYoutube=google.youtube({version:'v3',auth:process.env.YOUTUBE_API_KEY});
 app.use(helmet({contentSecurityPolicy:false,crossOriginOpenerPolicy:{policy:'same-origin-allow-popups'}}));
 app.use(express.json({limit:'1mb'}));
 app.use(express.static(path.join(__dirname,'public')));
@@ -60,14 +72,13 @@ app.use('/api',rateLimit({windowMs:60000,limit:60,standardHeaders:'draft-7',lega
 // inside an isolated per-user workspace; the old shared JSON file is never served.
 app.use('/api',(req,res,next)=>{
   if(req.path==='/health'||req.path==='/supabase-config') return next();
-  requireSupabaseUser(req,res,()=>{
+  requireSupabaseUser(req,res,async()=>{
     try {
-      const file=userDbFile(req.suhuisUser.id);
-      const accountDb=loadUserDb(req.suhuisUser.id);
-      userContext.run({db:accountDb,file},next);
+      const accountDb=await loadUserDb(req.suhuisUser.id,req.supabaseAccessToken);
+      userContext.run({db:accountDb,userId:req.suhuisUser.id,accessToken:req.supabaseAccessToken},next);
     } catch(error) {
       console.error('Workspace initialization failed:',error.message);
-      res.status(500).json({error:'Could not open your private SUHAIS workspace.'});
+      res.status(503).json({error:'Your private SUHAIS workspace could not be loaded from Supabase. No shared data was returned.'});
     }
   });
 });
@@ -118,7 +129,7 @@ app.post('/api/discover',async(req,res)=>{
    found.push({id,title:sn.title||'Untitled video',channelId:sn.channelId,channel:sn.channelTitle||'Unknown channel',description:(sn.description||'').slice(0,3000),publishedAt:sn.publishedAt,thumbnail:sn.thumbnails?.medium?.url||sn.thumbnails?.default?.url,url:'https://www.youtube.com/watch?v='+id,views:Number(n.viewCount||0),likes:Number(n.likeCount||0),comments:Number(n.commentCount||0),duration:st?.contentDetails?.duration||null,historyStatus:prior?.published?'commented':prior?'previously-discovered':'new'});
   }
   for(const v of found){const rec=recordFor(v.id);rec.lastSeenAt=new Date().toISOString();rec.title=v.title;rec.channel=v.channel}
-  db.batches=(db.batches||0)+1;if(found.length)saveDb();
+  db.batches=(db.batches||0)+1;if(found.length)await saveDb();
   const sortBy=req.body?.sortBy;
   if(['views','likes','comments','engagement','viewsPerDay','likeRate','publishedAt'].includes(sortBy)){
    const dir=req.body?.direction==='asc'?1:-1;
@@ -136,7 +147,7 @@ app.post('/api/discover',async(req,res)=>{
  }
 });
 app.get('/api/history',(req,res)=>{const items=Object.values(db.videos).map(v=>({...v,historyStatus:v.published?'commented':v.status}));res.json({items,total:items.length,commented:items.filter(x=>x.published).length,discovered:items.filter(x=>!x.published).length})});
-app.post('/api/draft',async(req,res)=>{const {title,channel,description,style,language='english',tone='natural',format='comment',attitude='appreciative',customInstructions=''}=req.body||{};if(!title||!channel)return res.status(400).json({error:'Video title and channel are required.'});try{const prompt='Write one thoughtful, positive, specific YouTube comment based ONLY on public metadata. Do not claim to have watched the video. Avoid generic praise, repetition, promotion, links or unsupported claims. If metadata is insufficient, ask a relevant question. Under 65 words. Style: '+(style||'warm, articulate and constructive')+'\nTitle: '+title+'\nChannel: '+channel+'\nDescription: '+(description||'(none)');const comment=await generateCommentText(prompt,{temperature:0.65,maxOutputTokens:160});if(req.body.id){const rec=recordFor(String(req.body.id));rec.drafts=rec.drafts||[];rec.drafts.push({comment,createdAt:new Date().toISOString()});rec.status='drafted';saveDb()}res.json({comment})}catch(e){console.error('Gemini draft:',e.message);res.status(502).json({error:'AI drafting failed: '+e.message})}});
+app.post('/api/draft',async(req,res)=>{const {title,channel,description,style,language='english',tone='natural',format='comment',attitude='appreciative',customInstructions=''}=req.body||{};if(!title||!channel)return res.status(400).json({error:'Video title and channel are required.'});try{const prompt='Write one thoughtful, positive, specific YouTube comment based ONLY on public metadata. Do not claim to have watched the video. Avoid generic praise, repetition, promotion, links or unsupported claims. If metadata is insufficient, ask a relevant question. Under 65 words. Style: '+(style||'warm, articulate and constructive')+'\nTitle: '+title+'\nChannel: '+channel+'\nDescription: '+(description||'(none)');const comment=await generateCommentText(prompt,{temperature:0.65,maxOutputTokens:160});if(req.body.id){const rec=recordFor(String(req.body.id));rec.drafts=rec.drafts||[];rec.drafts.push({comment,createdAt:new Date().toISOString()});rec.status='drafted';await saveDb()}res.json({comment})}catch(e){console.error('Gemini draft:',e.message);res.status(502).json({error:'AI drafting failed: '+e.message})}});
 app.post('/api/adapt',async(req,res)=>{const {baseComment,title,channel,description}=req.body||{};const base=String(baseComment||'').trim();if(base.length<3||base.length>1000)return res.status(400).json({error:'Your starting message must be 3–1,000 characters.'});if(!title||!channel)return res.status(400).json({error:'Video title and channel are required.'});try{const prompt='Adapt the central message into a natural, relevant comment specific to this video. Preserve intent. Do not claim the user watched it or invent facts. No links. Under 65 words. Return only the comment.\nCENTRAL MESSAGE: '+base+'\nVIDEO TITLE: '+title+'\nCHANNEL: '+channel+'\nDESCRIPTION: '+(description||'(none)');res.json({comment:await generateCommentText(prompt,{temperature:0.55,maxOutputTokens:180})})}catch(e){res.status(502).json({error:'Could not personalize this comment: '+e.message})}});
 app.post('/api/adapt-batch',async(req,res)=>{const {baseComment,attitude='appreciative',attitudeIntensity='moderate',secondaryAttitude='',customAttitude='',tone='natural',toneIntensity='moderate',language='english',regionalVariant='',format='comment',vocabulary='intermediate',sentenceStyle='balanced',length='medium',customInstructions='',videos:items}=req.body||{};const base=String(baseComment||'').trim();const stance=String(attitude||'appreciative').slice(0,40);const toneMap={natural:'Natural and conversational',slang:'Contemporary informal slang, without forced expressions',formal:'Formal and polished',legal:'Precise legal-register language; do not present as legal advice or invent legal authority',poetical:'Poetic and lyrical',official:'Official and institutional',victorian:'Victorian-era diction and cadence',classic:'Classical, timeless diction',ornate:'Ornate and elaborate rhetoric',decorative:'Decorative, expressive and elegant'};const toneInstruction=(toneMap[tone]||String(tone||'Natural'))+'; intensity: '+toneIntensity+'.';const languageNames={english:'English',persian:'Persian (Farsi)',dari:'Dari',pashto:'Pashto',urdu:'Urdu',arabic:'Arabic',turkish:'Turkish',french:'French',spanish:'Spanish',german:'German',hindi:'Hindi',portuguese:'Portuguese',italian:'Italian',dutch:'Dutch',swedish:'Swedish',norwegian:'Norwegian',danish:'Danish',estonian:'Estonian',polish:'Polish',ukrainian:'Ukrainian',chinese:'Chinese',japanese:'Japanese',korean:'Korean',bengali:'Bengali',indonesian:'Indonesian',malay:'Malay',azerbaijani:'Azerbaijani',kurdish:'Kurdish',punjabi:'Punjabi',greek:'Greek',hebrew:'Hebrew'};const langInstruction='Write entirely in '+(languageNames[language]||'English')+(regionalVariant?' ('+String(regionalVariant).slice(0,80)+')':'')+'. Use native idiom and correct script direction.';const formNames={comment:'YouTube comment',prose:'prose',poem:'poetry',essay:'short essay',aphorism:'aphorism',meditation:'meditation',argument:'reasoned argument',epistle:'epistle',narrative:'narrative',review:'review',critique:'critique',reflection:'reflection',monologue:'monologue',dialogue:'dialogue',editorial:'editorial',manifesto:'manifesto',proverb:'proverb',satire:'satire',parable:'parable',lyrical:'lyrical prose',dramatic:'dramatic verse',haiku:'haiku',ghazal:'ghazal',rubai:'rubai'};const formatInstruction='Write in the form of '+(formNames[format]||'YouTube comment')+'. Respect the genuine structure and conventions of that form.';if(base.length<3||base.length>1000)return res.status(400).json({error:'Your starting message must be 3–1,000 characters.'});if(!Array.isArray(items)||!items.length||items.length>10)return res.status(400).json({error:'Send between 1 and 10 selected videos per batch.'});const results=await Promise.all(items.map(async(v,index)=>{try{if(!v?.id||!v?.title||!v?.channel)throw new Error('Video details are incomplete.');const stanceInstruction=({appreciative:'Express genuine appreciation.',supportive:'Be supportive and encouraging.',enthusiastic:'Be energetic without exaggeration.',neutral:'Remain neutral and factual.',balanced:'Acknowledge reasonable strengths and reservations.',critical:'Be skeptical and constructive; critique ideas, never people.',skeptical:'Question unsupported claims fairly.',analytical:'Emphasize reasoning and distinctions.',inquisitive:'Ask a thoughtful question.',challenging:'Challenge ideas respectfully.',constructive:'Offer useful, actionable observations.',empathetic:'Show understanding and care.',reflective:'Use considered reflection.',philosophical:'Explore broader implications.',provocative:'Offer a challenging perspective without hostility.',satirical:'Use restrained satire without personal attacks.',humorous:'Use appropriate, non-derogatory humor.',inspirational:'Encourage thoughtful action.',cautious:'Use careful, qualified language.',contrarian:'Offer a reasoned alternative perspective.'})[stance]||'Express the selected attitude appropriately.';const prompt=['Write a distinct YouTube comment for THIS video, not a template reused across the batch. Analyze this video metadata independently. Adapt the central message to this specific subject and details.','USER ATTITUDE: '+stance+'; intensity '+attitudeIntensity+'. Secondary attitude: '+(secondaryAttitude||'none')+'. Custom direction: '+String(customAttitude||'none').slice(0,300)+'. '+stanceInstruction,'LANGUAGE: '+langInstruction,'WRITING FORM: '+formatInstruction,'LANGUAGE TONE: '+toneInstruction,'VOCABULARY: '+vocabulary+'. SENTENCE STYLE: '+sentenceStyle+'. LENGTH: '+length+'. CUSTOM INSTRUCTIONS: '+String(customInstructions||'none').slice(0,500),'CENTRAL MESSAGE / VIEWPOINT: '+base,'VIDEO TITLE: '+String(v.title).slice(0,300),'CHANNEL: '+String(v.channel).slice(0,160),'DESCRIPTION: '+String(v.description||'(not provided)').slice(0,1800),'Requirements: Be specific to this video; preserve the user’s viewpoint; do not copy the same phrasing across videos; do not claim the user watched it; do not invent facts; no links; under 900 characters. Return only the requested writing.'].join('\n\n');return {index,id:v.id,comment:await generateCommentText(prompt,{temperature:0.75,maxOutputTokens:180})}}catch(e){return {index,id:v?.id||null,error:e.message}}}));res.json({results})});app.post('/api/improve',async(req,res)=>{const {comment,instruction,videoTitle}=req.body||{};if(!String(comment||'').trim())return res.status(400).json({error:'Enter a comment to improve.'});try{const prompt='Improve this YouTube comment. Preserve meaning and factual limits. Correct grammar, clarity and naturalness. Keep respectful, relevant and under 65 words. Do not invent that the writer watched the video. Instruction: '+(instruction||'Make clearer and more thoughtful.')+'\nVideo: '+(videoTitle||'not supplied')+'\nComment: '+comment;res.json({comment:await generateCommentText(prompt,{temperature:0.4,maxOutputTokens:180})})}catch(e){res.status(502).json({error:'AI improvement failed: '+e.message})}});
 
@@ -159,7 +170,7 @@ app.put('/api/comments/:commentId',ensureConfigured,ensureAuth,async(req,res)=>{
   record.publishedComments=record.publishedComments||[];if(!record.publishedComments.some(c=>c.commentId===commentId))record.publishedComments.push(entry);entry.revisions=entry.revisions||[{text:entry.text,publishedAt:entry.publishedAt}];
   entry.revisions.push({text:confirmedText,editedAt:now});
   entry.text=confirmedText;entry.editedAt=now;
-  record.commentText=confirmedText;saveDb();
+  record.commentText=confirmedText;await saveDb();
   res.json({ok:true,verified:true,commentId,text:confirmedText,editedAt:now,message:'Updated on YouTube and verified.'});
  }catch(e){
   const data=e.response?.data?.error||{},reason=data.errors?.[0]?.reason||'',message=data.message||e.message||'Unknown YouTube API error';
@@ -173,7 +184,7 @@ app.put('/api/comments/:commentId',ensureConfigured,ensureAuth,async(req,res)=>{
   res.status(502).json({error,reason:reason||undefined});
  }
 });
-app.post('/api/publish',ensureConfigured,ensureAuth,async(req,res)=>{const {videoId,channelId,comment,userConfirmed}=req.body||{};const text=String(comment||'').trim();if(userConfirmed!==true)return res.status(400).json({error:'Explicit approval is required.'});if(!videoId||!channelId||text.length<3||text.length>1000)return res.status(400).json({error:'Video ID, channel ID, and a 3–1,000 character comment are required.'});const rec=recordFor(videoId);rec.publishedComments=rec.publishedComments||[];if(rec.publishedComments.some(x=>x.text===text))return res.status(409).json({error:'This exact comment has already been published to this video.'});try{const result=await req.youtube.commentThreads.insert({part:['snippet'],requestBody:{snippet:{channelId,videoId,topLevelComment:{snippet:{textOriginal:text}}}}});const commentId=result.data?.snippet?.topLevelComment?.id||result.data?.id;if(!commentId)throw new Error('YouTube did not return a comment ID; publication could not be verified.');const isPublic=result.data?.snippet?.isPublic!==false;rec.publishedComments.push({commentId,text,publishedAt:new Date().toISOString(),isPublic});rec.published=true;rec.status=isPublic?'commented':'pending-review';rec.commentId=commentId;rec.publishedAt=new Date().toISOString();rec.commentText=text;rec.commentIsPublic=isPublic;saveDb();res.json({ok:true,commentId,isPublic,videoUrl:'https://www.youtube.com/watch?v='+videoId,message:isPublic?'YouTube accepted the comment.':'YouTube accepted the comment but it is not currently public; it may be awaiting moderation.'})}catch(e){console.error('Publish:',e.response?.data||e.message);const reason=e.response?.data?.error?.errors?.[0]?.reason;res.status(502).json({error:reason==='commentsDisabled'?'Comments are disabled for this video.':reason==='forbidden'?'YouTube denied permission to comment on this video.':reason==='channelOrVideoIdMissing'?'YouTube requires the video channel ID; refresh discovery results and try again.':'YouTube rejected the comment: '+(e.response?.data?.error?.message||e.message)})}});
+app.post('/api/publish',ensureConfigured,ensureAuth,async(req,res)=>{const {videoId,channelId,comment,userConfirmed}=req.body||{};const text=String(comment||'').trim();if(userConfirmed!==true)return res.status(400).json({error:'Explicit approval is required.'});if(!videoId||!channelId||text.length<3||text.length>1000)return res.status(400).json({error:'Video ID, channel ID, and a 3–1,000 character comment are required.'});const rec=recordFor(videoId);rec.publishedComments=rec.publishedComments||[];if(rec.publishedComments.some(x=>x.text===text))return res.status(409).json({error:'This exact comment has already been published to this video.'});try{const result=await req.youtube.commentThreads.insert({part:['snippet'],requestBody:{snippet:{channelId,videoId,topLevelComment:{snippet:{textOriginal:text}}}}});const commentId=result.data?.snippet?.topLevelComment?.id||result.data?.id;if(!commentId)throw new Error('YouTube did not return a comment ID; publication could not be verified.');const isPublic=result.data?.snippet?.isPublic!==false;rec.publishedComments.push({commentId,text,publishedAt:new Date().toISOString(),isPublic});rec.published=true;rec.status=isPublic?'commented':'pending-review';rec.commentId=commentId;rec.publishedAt=new Date().toISOString();rec.commentText=text;rec.commentIsPublic=isPublic;await saveDb();res.json({ok:true,commentId,isPublic,videoUrl:'https://www.youtube.com/watch?v='+videoId,message:isPublic?'YouTube accepted the comment.':'YouTube accepted the comment but it is not currently public; it may be awaiting moderation.'})}catch(e){console.error('Publish:',e.response?.data||e.message);const reason=e.response?.data?.error?.errors?.[0]?.reason;res.status(502).json({error:reason==='commentsDisabled'?'Comments are disabled for this video.':reason==='forbidden'?'YouTube denied permission to comment on this video.':reason==='channelOrVideoIdMissing'?'YouTube requires the video channel ID; refresh discovery results and try again.':'YouTube rejected the comment: '+(e.response?.data?.error?.message||e.message)})}});
 app.get('/api/health',(req,res)=>res.json({ok:true,version:'2.0.0'}));
 app.get('*',(req,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
 app.listen(PORT,()=>console.log('Positive Voice running on port '+PORT));
