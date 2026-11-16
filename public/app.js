@@ -1,24 +1,31 @@
 const $ = s => document.querySelector(s);
-let selected = null, status = null, oauthConfig = null, googleCodeClient = null;
+let selected = null, status = null, oauthConfig = null, googleTokenClient = null;
 function toast(msg){const el=$('#toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),3500)}
 async function api(url, opts={}){const r=await fetch(url,{...opts,headers:{'Content-Type':'application/json',...(opts.headers||{})}});const d=await r.json().catch(()=>({error:'Unexpected server response'}));if(!r.ok)throw new Error(d.error||'Request failed');return d}
 async function refresh(){try{status=await api('/api/status');$('#connection').textContent=status.connected?'YouTube connected':'Not connected';$('#connect').classList.toggle('hidden',status.connected);$('#disconnect').classList.toggle('hidden',!status.connected);let items=[];if(!status.configured)items.push('Server setup is incomplete: '+status.missing.join(', ')+'.');else items.push('Google and YouTube API settings are present.');if(!status.aiConfigured)items.push('AI drafting is not configured yet; add an OpenAI API key to enable it.');if(status.connected)items.push('Connected as '+(status.channel?.title||'your YouTube account')+'.');$('#setupText').textContent=items.join(' ')}catch(e){$('#setupText').textContent='Could not reach the app server.'}}
 $('#connect').onclick=()=>{
   if(!status?.configured){toast('The server configuration is incomplete.');return}
   if(!oauthConfig || !window.google?.accounts?.oauth2){toast('Google sign-in is still loading. Reload this page and try again.');return}
-  if(!googleCodeClient){
-    googleCodeClient=google.accounts.oauth2.initCodeClient({
+  if(!googleTokenClient){
+    googleTokenClient=google.accounts.oauth2.initTokenClient({
       client_id:oauthConfig.clientId,
       scope:'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl',
-      ux_mode:'redirect',
-      redirect_uri:oauthConfig.redirectUri,
-      state:oauthConfig.state,
-      select_account:true,
-      access_type:'offline',
-      prompt:'consent'
+      callback:async response=>{
+        if(response.error){toast('Google authorization failed: '+response.error);return}
+        try{
+          $('#connect').disabled=true;
+          const r=await fetch('/auth/google/token',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-Requested-With':'XmlHttpRequest'},body:JSON.stringify({access_token:response.access_token})});
+          const d=await r.json().catch(()=>({error:'Unexpected server response'}));
+          if(!r.ok)throw new Error(d.error||'Google connection failed');
+          toast('YouTube connected as '+(d.channel?.title||'your channel')+'.');
+          await refresh();
+        }catch(e){toast(e.message)}
+        finally{$('#connect').disabled=false}
+      },
+      error_callback:error=>toast('Google sign-in could not open: '+(error.type||'popup error'))
     });
   }
-  googleCodeClient.requestCode();
+  googleTokenClient.requestAccessToken({prompt:'consent'});
 };
 $('#disconnect').onclick=async()=>{await api('/auth/logout',{method:'POST'});toast('YouTube disconnected.');refresh()};
 async function updateDiscoveryStats(){try{const d=await api('/api/discovery-stats');$('#discoveryStats').textContent=`${d.totalRemembered.toLocaleString()} videos remembered · ${d.batches} batches discovered. Previously shown videos are excluded.`}catch{}}
