@@ -103,7 +103,7 @@ app.put('/api/comments/:commentId',ensureConfigured,ensureAuth,async(req,res)=>{
  if(!commentId||text.length<3||text.length>1000)return res.status(400).json({error:'A comment ID and 3–1,000 characters of text are required.'});
  let record=null,entry=null;
  for(const v of Object.values(db.videos)){const found=(v.publishedComments||[]).find(c=>c.commentId===commentId);if(found){record=v;entry=found;break}}
- if(!entry)return res.status(404).json({error:'This comment is not in SUHAIS history. Refresh your comment history and try again.'});
+ if(!entry){const videoId=String(req.body?.videoId||'').trim(),previousText=String(req.body?.previousText||'').trim();if(!videoId||previousText.length<3||previousText.length>1000)return res.status(404).json({error:'This comment is not in SUHAIS history. Reopen it from your saved browser library and try again.'});record=recordFor(videoId);entry={commentId,text:previousText,publishedAt:null,isPublic:true};}
  try{
   const result=await req.youtube.comments.update({part:['snippet'],requestBody:{id:commentId,snippet:{textOriginal:text}}});
   const apiText=String(result.data?.snippet?.textOriginal||'');
@@ -113,7 +113,7 @@ app.put('/api/comments/:commentId',ensureConfigured,ensureAuth,async(req,res)=>{
   const confirmedText=String(confirmed?.snippet?.textOriginal||apiText);
   if(!confirmed||confirmedText!==text)throw new Error('YouTube accepted the update request but the follow-up check did not confirm the new text. Refresh YouTube and check the comment before retrying.');
   const now=new Date().toISOString();
-  entry.revisions=entry.revisions||[{text:entry.text,publishedAt:entry.publishedAt}];
+  record.publishedComments=record.publishedComments||[];if(!record.publishedComments.some(c=>c.commentId===commentId))record.publishedComments.push(entry);entry.revisions=entry.revisions||[{text:entry.text,publishedAt:entry.publishedAt}];
   entry.revisions.push({text:confirmedText,editedAt:now});
   entry.text=confirmedText;entry.editedAt=now;
   record.commentText=confirmedText;saveDb();
