@@ -3,7 +3,24 @@ let status=null,videos=[],drafts=new Map(),draftCounter=0;
 let discoveryNextPageToken=null,discoveryTargetCount=50,discoveryOptions=null,discoveryLoading=false;
 let DRAFT_STORE='pv-drafts-v2';
 let HISTORY_STORE='pv-history-v1';
-function setAccountStorage(userId){DRAFT_STORE='pv-drafts-v2:'+userId;HISTORY_STORE='pv-history-v1:'+userId;}
+function setAccountStorage(userId){
+  const id=String(userId||'').trim();
+  if(!id)throw new Error('A verified SUHAIS account is required before opening a workspace.');
+  const previous=localStorage.getItem('suhuis-active-user');
+  if(previous&&previous!==id){
+    // Never carry in-memory records across identities. Account-specific saved
+    // records remain intact under their own user-scoped keys.
+    drafts.clear();videos=[];discoveryNextPageToken=null;discoveryTargetCount=50;
+    const results=$('#results');if(results)results.innerHTML='<div class="empty">Your new account workspace is ready. Search for a subject to discover videos.</div>';
+    const history=$('#historyList');if(history)history.replaceChildren();
+    const historyStats=$('#historyStats');if(historyStats)historyStats.textContent='Loading your account history…';
+    ['metricVideos','metricPublished','metricDrafts','metricApproved','analyticsVideos','analyticsPublished','analyticsEdited','analyticsPending'].forEach(key=>{const node=$('#'+key);if(node)node.textContent='0'});
+    const queue=$('#drafts');if(queue)queue.innerHTML='<div class="empty">No comments prepared in this account yet.</div>';
+  }
+  DRAFT_STORE='pv-drafts-v2:'+id;
+  HISTORY_STORE='pv-history-v1:'+id;
+  localStorage.setItem('suhuis-active-user',id);
+}
 function persistDrafts(){
   const entries=[...drafts.entries()];
   try{localStorage.setItem(DRAFT_STORE,JSON.stringify(entries))}catch(e){toast('Could not save drafts on this device: '+e.message)}
@@ -127,5 +144,5 @@ function setupWorkspaceNavigation(){const composer=$('.collective-top'),studio=$
 function getDiscoveryDateRange(){const mode=$('#datePreset').value;if(mode==='any')return {publishedAfter:null,publishedBefore:null};if(mode==='custom'){const from=$('#dateAfter').value,to=$('#dateBefore').value;if(from&&to&&from>to)throw new Error('The start date must be on or before the end date.');return {publishedAfter:from?new Date(from+'T00:00:00.000Z').toISOString():null,publishedBefore:to?new Date(to+'T23:59:59.999Z').toISOString():null}}const now=new Date(),after=new Date(now),days={'24h':1,'7d':7,'30d':30,'90d':90,'6m':183,'1y':365,'2y':730,'5y':1825};after.setTime(now.getTime()-(days[mode]||0)*86400000);return {publishedAfter:after.toISOString(),publishedBefore:null}}
 $('#datePreset').onchange=()=>{$('#customDateRange').hidden=$('#datePreset').value!=='custom'};
 const params=new URLSearchParams(location.search);
-window.suhuisAuthReady.then(async()=>{const user=window.suhuisUser;if(!user)return;setAccountStorage(user.id);await restoreDrafts();refresh();loadHistory().then(renderDashboard);setupWorkspaceNavigation();initAppearance();}).catch(error=>toast('Account initialization failed: '+error.message));
+window.suhuisAuthReady.then(async()=>{const user=window.suhuisUser;if(!user?.id)return;setAccountStorage(user.id);await restoreDrafts();await refresh();await loadHistory();renderDashboard();setupWorkspaceNavigation();initAppearance();}).catch(error=>{console.error('SUHAIS account initialization:',error);toast('Account initialization failed: '+error.message)});
 const sidebar=$('#appSidebar'),toggle=$('#sidebarToggle');document.querySelectorAll('.nav-link').forEach(link=>link.addEventListener('click',()=>{document.querySelectorAll('.nav-link').forEach(x=>x.classList.remove('active'));link.classList.add('active');sidebar.classList.remove('sidebar-open');toggle.setAttribute('aria-expanded','false');toggle.innerHTML='☰ <span>Menu</span>'}));
