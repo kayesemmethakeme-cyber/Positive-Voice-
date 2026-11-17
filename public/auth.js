@@ -34,14 +34,15 @@
       const {data,error}=await client.auth.getSession();
       if(error)throw error;
       currentUser=data.session?.user||null;
+      if(currentUser?.id)localStorage.setItem('suhuis-active-user',currentUser.id);
       if(location.hash.includes('type=recovery')||location.hash.includes('reset-password')){window.suhuisUser=currentUser;showGate();setMode('update');}
       else if(currentUser){showApp();window.suhuisUser=currentUser;window.dispatchEvent(new CustomEvent('suhuis:authenticated',{detail:{user:currentUser}}));}
       else showGate();
       client.auth.onAuthStateChange((event,session)=>{
         const next=session?.user||null;
-        if(event==='SIGNED_OUT'){currentUser=null;window.suhuisUser=null;location.reload();return;}
-        if(next&&currentUser&&next.id!==currentUser.id){switching=true;location.reload();return;}
-        if(next&&!currentUser){currentUser=next;window.suhuisUser=next;location.reload();}
+        if(event==='SIGNED_OUT'){if(currentUser?.id)sessionStorage.removeItem('pv-google-token:'+currentUser.id);localStorage.removeItem('suhuis-active-user');currentUser=null;window.suhuisUser=null;location.replace(location.pathname+location.search);return;}
+        if(next&&currentUser&&next.id!==currentUser.id){switching=true;localStorage.setItem('suhuis-active-user',next.id);location.replace(location.pathname+location.search);return;}
+        if(next&&!currentUser){currentUser=next;window.suhuisUser=next;localStorage.setItem('suhuis-active-user',next.id);location.replace(location.pathname+location.search);}
       });
     }catch(error){showGate();setMessage(error.message||'Could not initialize account access.',true);}
   }
@@ -92,10 +93,10 @@
       button.textContent='Signing out…';
       const {error}=await client.auth.signOut();
       if(error){setMessage(error.message,true);button.disabled=false;button.textContent='Sign out';}
-      else{localStorage.removeItem('suhuis-active-user');location.replace(location.pathname);}
+      else{localStorage.removeItem('suhuis-active-user');location.replace(location.pathname+location.search);}
     });
     const destination=document.querySelector('.sidebar-bottom');
-    if(destination)destination.append(button);
+    if(destination){const identity=document.createElement('div');identity.className='suhuis-account-identity';identity.id='suhuisAccountIdentity';identity.textContent=window.suhuisUser?.email||'Signed-in account';destination.prepend(identity);destination.append(button);}
     else document.querySelector('.header-tools')?.append(button);
   });
   window.suhuisSignOut=async()=>client?.auth.signOut();
