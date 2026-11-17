@@ -69,7 +69,7 @@ async function performDiscoveryPage(reset=false){
   videos.forEach(v=>saveLocalVideo(v.id));
   renderVideos();
   const exhausted=!discoveryNextPageToken;
-  const note='Showing '+videos.length.toLocaleString()+' of '+discoveryTargetCount.toLocaleString()+' requested · scanned '+pagesScanned+' YouTube page(s), up to '+(pagesScanned*lastPageSize)+' candidates. '+(excluded?'Excluded '+excluded+' results outside the selected channel-country filter. ':'')+(exhausted?'No further YouTube pages are available.':videos.length>=discoveryTargetCount?'Requested result count reached.':'More results are available; continue to scan another batch.');
+  const note='Showing '+videos.length.toLocaleString()+' of '+discoveryTargetCount.toLocaleString()+' requested · scanned '+pagesScanned+' YouTube page(s), up to '+(pagesScanned*lastPageSize)+' candidates. '+(excluded?'Excluded '+excluded+' results through the active filters (including channel-country matching). ':'')+(exhausted?'No further YouTube pages are available.':videos.length>=discoveryTargetCount?'Requested result count reached.':'More results are available; continue to scan another batch.');
   $('#discoveryStats').textContent=note+' YouTube search quota applies to every scanned page.';
   if(more){more.hidden=exhausted||videos.length>=discoveryTargetCount;more.disabled=false;more.textContent='Continue search (up to 3 pages)'}
   if(!videos.length)$('#results').innerHTML='<div class="empty">No videos matched these filters in the pages scanned. Continue the search for more pages, or broaden the filters.</div>';
