@@ -63,8 +63,12 @@ app.post('/api/discover',async(req,res)=>{
   if(req.body?.pageToken)params.pageToken=String(req.body.pageToken).slice(0,500);
   const response=await publicYoutube.search.list(params);
   const items=response.data.items||[],ids=items.map(x=>x.id?.videoId).filter(Boolean);
-  const statsResponse=ids.length?await publicYoutube.videos.list({part:['statistics','contentDetails'],id:ids}):{data:{items:[]}};
+  const statsResponse=ids.length?await publicYoutube.videos.list({part:['statistics','contentDetails','recordingDetails'],id:ids}):{data:{items:[]}};
   const stats=new Map((statsResponse.data.items||[]).map(v=>[v.id,v]));
+  const channelIds=[...new Set(items.map(x=>x.snippet?.channelId).filter(Boolean))];
+  const channelResponse=channelIds.length?await publicYoutube.channels.list({part:['snippet'],id:channelIds}):{data:{items:[]}};
+  const channelCountries=new Map((channelResponse.data.items||[]).map(c=>[c.id,String(c.snippet?.country||'').toUpperCase()]));
+  const selectedRegion=req.body?.region&&String(req.body.region).toLowerCase()!=='all'?String(req.body.region).slice(0,2).toUpperCase():null;
   const found=[];
   for(const item of items){
    const id=item.id?.videoId;if(!id)continue;
@@ -72,8 +76,11 @@ app.post('/api/discover',async(req,res)=>{
    if(filter==='new'&&prior)continue;
    if(filter==='uncommented'&&prior?.published)continue;
    if(filter==='commented'&&!prior?.published)continue;
-   const sn=item.snippet||{},st=stats.get(id),n=st?.statistics||{};
-   found.push({id,title:sn.title||'Untitled video',channelId:sn.channelId,channel:sn.channelTitle||'Unknown channel',description:(sn.description||'').slice(0,3000),publishedAt:sn.publishedAt,thumbnail:sn.thumbnails?.medium?.url||sn.thumbnails?.default?.url,url:'https://www.youtube.com/watch?v='+id,views:Number(n.viewCount||0),likes:Number(n.likeCount||0),comments:Number(n.commentCount||0),duration:st?.contentDetails?.duration||null,historyStatus:prior?.published?'commented':prior?'previously-discovered':'new'});
+   const sn=item.snippet||{},st=stats.get(id),n=st?.statistics||{},countryCode=channelCountries.get(sn.channelId)||'';
+   // regionCode in YouTube search.list only biases availability/relevance; it does not filter creator country.
+   // Enforce the user's selected country against the channel's declared country. Unknown country is excluded in strict mode.
+   if(selectedRegion&&countryCode!==selectedRegion)continue;
+   found.push({id,title:sn.title||'Untitled video',channelId:sn.channelId,channel:sn.channelTitle||'Unknown channel',channelCountry:countryCode||null,countryFilterMatch:selectedRegion?countryCode===selectedRegion:null,description:(sn.description||'').slice(0,3000),publishedAt:sn.publishedAt,thumbnail:sn.thumbnails?.medium?.url||sn.thumbnails?.default?.url,url:'https://www.youtube.com/watch?v='+id,views:Number(n.viewCount||0),likes:Number(n.likeCount||0),comments:Number(n.commentCount||0),duration:st?.contentDetails?.duration||null,recordingLocation:st?.recordingDetails?.locationDescription||null,historyStatus:prior?.published?'commented':prior?'previously-discovered':'new'});
   }
   for(const v of found){const rec=recordFor(v.id);rec.lastSeenAt=new Date().toISOString();rec.title=v.title;rec.channel=v.channel;if(accountId){rec.discoveredBy=Array.isArray(rec.discoveredBy)?rec.discoveredBy:[];if(!rec.discoveredBy.includes(accountId))rec.discoveredBy.push(accountId)}}
   db.batches=(db.batches||0)+1;if(found.length)saveDb();
@@ -83,7 +90,7 @@ app.post('/api/discover',async(req,res)=>{
    const metric=v=>sortBy==='engagement'?(v.views?(v.likes+v.comments)/v.views:0):sortBy==='viewsPerDay'?(v.publishedAt?v.views/Math.max(1,(Date.now()-Date.parse(v.publishedAt))/86400000):0):sortBy==='likeRate'?(v.views?v.likes/v.views:0):sortBy==='publishedAt'?Date.parse(v.publishedAt||0):v[sortBy];
    found.sort((a,b)=>(metric(a)-metric(b))*dir);
   }
-  res.json({videos:found,requested,returned:found.length,pages:1,batches:db.batches,totalRemembered:Object.keys(db.videos).length,nextPageToken:response.data.nextPageToken||null,hasMore:Boolean(response.data.nextPageToken),pageSize:50,quotaNote:'One YouTube search page was requested. Load more only when you need additional results.'});
+  res.json({videos:found,requested,returned:found.length,pages:1,batches:db.batches,totalRemembered:Object.keys(db.videos).length,nextPageToken:response.data.nextPageToken||null,hasMore:Boolean(response.data.nextPageToken),pageSize:50,appliedRegion:selectedRegion,regionFilterMode:selectedRegion?'strict_channel_country':'none',excludedForRegion:selectedRegion?items.length-found.length:0,quotaNote:'One YouTube search page was requested. Country filtering uses the channel country declared by its owner; channels without a declared matching country are excluded.'});
  }catch(e){
   const apiError=e.response?.data?.error||{},details=Array.isArray(apiError.errors)?apiError.errors:[],reason=details[0]?.reason||'',message=apiError.message||e.message||'Unknown YouTube API error',code=e.response?.status||e.code;
   const quotaFailure=/quota|daily.?limit|rate.?limit/i.test(message+' '+reason)||details.some(x=>/quota|daily.?limit|rate.?limit/i.test(String(x.reason||'')+' '+String(x.message||'')));
