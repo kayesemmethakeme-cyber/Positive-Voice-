@@ -350,3 +350,89 @@ body.locale-fa{font-family:var(--app-font,'Vazirmatn',sans-serif)!important}body
 /* User-adjustable reading size */
 body :is(p,li,label,button,input,textarea,select,.nav-link,.nav-heading,.muted,.fine,.eyebrow,.about-grid h3,.about-principles h3,.section-head h2,.panel h2,.video h3,.draft-card h3,.meta,.metric-card span,.metric-card small,.field-help,.statusline){font-size:calc(1em * var(--app-font-scale,1))!important}
 .font-size-control{min-width:180px}.font-size-control label{display:flex;align-items:center;justify-content:space-between;gap:12px}.font-size-control output{font-variant-numeric:tabular-nums;font-weight:700;color:var(--blue)}.font-size-control input[type=range]{width:100%;accent-color:var(--blue);padding:0}
+
+
+/* SUHAIS · faded crimson-and-gold medieval cinematic atmosphere */
+:root{
+ --navy:#5b292d;--blue:#873d3e;--ink:#49332d;--muted:#806b60;
+ --line:#d7bd9d;--bg:#f0e2ce;--gold:#b18a50;--cream:#fff4df;
+}
+body{
+ background-color:#ead9c1!important;
+ background-image:
+  radial-gradient(ellipse at 18% 10%,rgba(143,48,53,.13),transparent 32%),
+  radial-gradient(ellipse at 84% 24%,rgba(180,139,76,.16),transparent 30%),
+  linear-gradient(125deg,#eee0ca 0%,#f8eedc 48%,#ead9c4 100%)!important;
+}
+body:after{
+ content:"";position:fixed;inset:0;z-index:0;pointer-events:none;
+ background-image:
+  url("https://commons.wikimedia.org/wiki/Special:FilePath/Knights_in_Combat_01.jpg"),
+  url("https://commons.wikimedia.org/wiki/Special:FilePath/Gawain_and_the_Green_Knight.jpg"),
+  url("https://commons.wikimedia.org/wiki/Special:FilePath/LifeOfRaymondLull14thCentury.JPG");
+ background-repeat:no-repeat,no-repeat,no-repeat;
+ background-size:clamp(190px,24vw,360px) auto,clamp(170px,20vw,290px) auto,clamp(190px,23vw,330px) auto;
+ background-position:3% 13%,96% 42%,9% 88%;
+ opacity:.105;filter:sepia(.72) saturate(.62) contrast(.88);
+ mix-blend-mode:multiply;
+}
+body:before{
+ background-image:url('/botanical-ornament.svg')!important;
+ background-size:560px 680px,700px 820px,480px 600px!important;
+ background-position:2% 4%,94% 45%,5% 92%!important;
+ background-repeat:repeat!important;
+ opacity:.22!important;
+}
+body[data-ornament="faint"]:before{opacity:.12!important}
+body[data-ornament="soft"]:before{opacity:.22!important}
+body[data-ornament="visible"]:before{opacity:.32!important}
+.app-shell,.app-main,main,header{position:relative;z-index:1}
+.app-sidebar{
+ background:linear-gradient(165deg,rgba(91,39,43,.97),rgba(73,39,36,.98))!important;
+ border-right:1px solid #b18a50!important;color:#f6e8ce!important;
+}
+.sidebar-brand{color:#f8ebd2!important;border-bottom-color:#c19b6655!important}
+.sidebar-brand strong{color:#f4dfb8!important}
+.sidebar-brand small{color:#d9bda0!important}
+.sidebar-logo{background:linear-gradient(145deg,#f7e9c9,#d8b77d)!important;color:#713b35!important;border-color:#c49b5e!important}
+.nav-heading{color:#d0ad78!important}
+.nav-link{color:#f0dfc8!important;border-bottom-color:#ead7b01a!important}
+.nav-link>span{color:#d7b477!important}
+.nav-link:hover,.nav-link.active{background:linear-gradient(90deg,#a36b493b,#d2a96a12)!important;color:#fff4df!important;box-shadow:inset 3px 0 #d5ad69!important}
+.sidebar-bottom{color:#e7d2b5!important;border-top-color:#ead7b033!important}
+.app-main header{
+ background:linear-gradient(105deg,rgba(88,39,43,.97),rgba(112,55,48,.96) 62%,rgba(137,91,54,.96))!important;
+ color:#fff0d8!important;border-bottom:1px solid #c19a61!important;
+}
+.brand strong{color:#f7e7c9!important}
+.brand small{color:#e4c9a8!important}
+.logo{background:#f5e6c7!important;color:#743d38!important;border-color:#c39c60!important}
+.panel,.notice{
+ background:linear-gradient(145deg,rgba(255,248,232,.82),rgba(247,234,211,.76))!important;
+ border-color:#d1b58a!important;
+ box-shadow:inset 0 0 0 3px rgba(255,255,255,.22),0 8px 24px rgba(83,43,31,.09)!important;
+ backdrop-filter:blur(2px);
+}
+.panel:before{border-color:rgba(153,93,63,.22)!important}
+.section-head h2,.panel h2,.hero h1,.about-grid h3,.about-principles h3{color:#713d36!important}
+.eyebrow{color:#986b3f!important}
+.number{background:#f2e2c4!important;color:#8a4a3e!important;border-color:#c6a36e!important}
+.primary{background:linear-gradient(125deg,#873f3c,#a96b45)!important;border-color:#773733!important;color:#fff2dc!important}
+.primary:hover{background:linear-gradient(125deg,#713331,#92583d)!important}
+.secondary{background:linear-gradient(125deg,#f4e6ce,#ead5b6)!important;border-color:#cdb187!important;color:#70483a!important}
+input,textarea,select{background:rgba(255,251,241,.94)!important;border-color:#cdb58e!important;color:#4d372e!important}
+.central-composer,.advanced-panel,.settings-customize,.settings-connection{
+ background:linear-gradient(145deg,rgba(248,232,210,.88),rgba(255,247,230,.84))!important;
+ border-color:#ceb287!important;
+}
+.video,.draft-card,.history-row,.metric-card,.overview-block,.about-grid article,.about-principles{
+ background:rgba(255,248,232,.78)!important;border-color:#d7c19a!important;
+}
+.video h3,.draft-card h3,.history-video-head strong{color:#713d36!important}
+.history-comment{background:#f1e2cd!important;border-left-color:#a45c49!important}
+#toast{background:#592f30!important;border-color:#c5a16a!important}
+@media(max-width:800px){
+ body:after{background-size:190px auto,170px auto,190px auto;background-position:-28px 15%,calc(100% + 38px) 46%,0 92%;opacity:.085}
+ body:before{background-size:380px 470px,470px 570px,340px 430px!important;opacity:.18!important}
+ .panel,.notice{background-color:rgba(255,248,232,.78)!important}
+}
