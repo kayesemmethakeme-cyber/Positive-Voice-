@@ -55,7 +55,7 @@ async function generateCommentText(prompt,opts={}){
    }
    const message=String(data.error?.message||'Gemini API error');
    if(response.status===429&&attempt<2){
-    const retryMatch=message.match(/retry in\\s+([0-9.]+)\\s*s/i);
+    const retryMatch=message.match(/retry in\s+([0-9.]+)\s*s/i);
     const retryAfter=Number(response.headers.get('retry-after')||0)*1000;
     const wait=Math.min(120000,Math.max(retryAfter,retryMatch?Math.ceil(Number(retryMatch[1])*1000)+500:60000));
     await waitMs(wait);
