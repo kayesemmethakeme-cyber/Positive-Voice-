@@ -29,7 +29,7 @@
       const cfg=await cfgResponse.json();
       if(!cfgResponse.ok)throw new Error(cfg.error||'Account service is not configured.');
       if(!window.supabase?.createClient)throw new Error('The account library could not be loaded. Refresh this page.');
-      client=window.supabase.createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+      client=window.supabase.createClient(cfg.url,cfg.key,{auth:{storageKey:'suhuis-auth-v1',persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,flowType:'pkce'}});
       window.suhuisSupabase=client;
       const {data,error}=await client.auth.getSession();
       if(error)throw error;
@@ -71,8 +71,10 @@
   modeButton.addEventListener('click',()=>setMode(mode==='signup'?'signin':'signup'));
   document.getElementById('authGoogle').addEventListener('click',async()=>{
     if(!client)return;setMessage('Opening Google sign-in…');
-    const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin,queryParams:{prompt:'select_account'}}});
-    if(error)setMessage(error.message,true);
+    try{
+      const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:new URL('/',location.origin).href,queryParams:{prompt:'select_account'}}});
+      if(error)throw error;
+    }catch(error){setMessage('Google sign-in could not be started: '+(error.message||'Please try again.'),true);}
   });
   document.getElementById('authReset').addEventListener('click',async()=>{
     if(!client)return;const email=document.getElementById('authEmail').value.trim();
