@@ -80,9 +80,23 @@
     setMessage(error?error.message:'If an account exists for that address, a password-reset email has been sent.',Boolean(error));
   });
   window.addEventListener('DOMContentLoaded',()=>{
-    const button=document.createElement('button');button.type='button';button.className='header-refresh';button.id='suhuisSignOut';button.textContent='Sign out';
-    button.addEventListener('click',async()=>{button.disabled=true;const {error}=await client.auth.signOut();if(error){setMessage(error.message,true);button.disabled=false;}else{localStorage.removeItem('suhuis-active-user');location.reload();}});
-    document.querySelector('.header-tools')?.append(button);
+    const button=document.createElement('button');
+    button.type='button';
+    button.className='auth-signout secondary';
+    button.id='suhuisSignOut';
+    button.textContent='Sign out';
+    button.setAttribute('aria-label','Sign out of your SUHAIS account');
+    button.addEventListener('click',async()=>{
+      if(!client)return;
+      button.disabled=true;
+      button.textContent='Signing out…';
+      const {error}=await client.auth.signOut();
+      if(error){setMessage(error.message,true);button.disabled=false;button.textContent='Sign out';}
+      else{localStorage.removeItem('suhuis-active-user');location.replace(location.pathname);}
+    });
+    const destination=document.querySelector('.sidebar-bottom');
+    if(destination)destination.append(button);
+    else document.querySelector('.header-tools')?.append(button);
   });
   window.suhuisSignOut=async()=>client?.auth.signOut();
   setMode('signin');
