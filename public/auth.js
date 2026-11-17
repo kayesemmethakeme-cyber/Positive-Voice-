@@ -71,7 +71,7 @@
   modeButton.addEventListener('click',()=>setMode(mode==='signup'?'signin':'signup'));
   document.getElementById('authGoogle').addEventListener('click',async()=>{
     if(!client)return;setMessage('Opening Google sign-in…');
-    const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin}});
+    const {error}=await client.auth.signInWithOAuth({provider:'google',options:{redirectTo:location.origin,queryParams:{prompt:'select_account'}}});
     if(error)setMessage(error.message,true);
   });
   document.getElementById('authReset').addEventListener('click',async()=>{
