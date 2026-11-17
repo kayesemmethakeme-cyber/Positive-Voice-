@@ -8,7 +8,9 @@ const { requireSupabaseUser, supabaseAuthConfigured } = require('./server/supaba
 const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
-const required = ['GOOGLE_CLIENT_ID','YOUTUBE_API_KEY'];
+// OAuth connection only requires the Google OAuth client ID. The API key is optional
+// when discovery uses the signed-in user's OAuth access token.
+const required = ['GOOGLE_CLIENT_ID'];
 const missing = required.filter(k => !process.env[k]);
 // User data is stored in Supabase with the signed-in user's JWT.
 // RLS on public.user_workspace enforces ownership; no service-role key is used.
@@ -91,7 +93,7 @@ function bearer(req){const m=String(req.headers['x-youtube-authorization']||'').
 function oauthClient(token){const auth=new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID);auth.setCredentials({access_token:token});return auth}
 function ensureAuth(req,res,next){const token=bearer(req);if(!token)return res.status(401).json({error:'YouTube is not connected. Tap Connect YouTube and authorize your Google account.'});const auth=oauthClient(token);req.youtube=google.youtube({version:'v3',auth});req.youtubeAccessToken=token;next()}
 app.get('/api/status',async(req,res)=>{const token=bearer(req);let connected=false,channel=null,connectionError=null;if(token){try{const result=await google.youtube({version:'v3',auth:oauthClient(token)}).channels.list({part:['snippet'],mine:true});const ch=result.data.items?.[0];if(ch){connected=true;channel={id:ch.id,title:ch.snippet?.title||'YouTube channel'}}else connectionError='Google authorized this account, but no YouTube channel was returned.'}catch(e){connectionError=e.response?.data?.error?.message||e.message||'YouTube account verification failed.'}}
-res.json({configured:missing.length===0,missing,connected,channel,connectionError,aiConfigured:Boolean(process.env.GEMINI_API_KEY),historyCount:Object.keys(db.videos).length,batches:db.batches||0})});
+res.json({configured:missing.length===0,missing,apiKeyConfigured:Boolean(process.env.YOUTUBE_API_KEY),connected,channel,connectionError,aiConfigured:Boolean(process.env.GEMINI_API_KEY),historyCount:Object.keys(db.videos).length,batches:db.batches||0})});
 app.get('/api/oauth-config',ensureConfigured,(req,res)=>res.json({clientId:process.env.GOOGLE_CLIENT_ID}));
 app.post('/auth/logout',(req,res)=>res.json({ok:true}));
 app.post('/api/discover',async(req,res)=>{
@@ -113,6 +115,7 @@ app.post('/api/discover',async(req,res)=>{
   // Prefer the user's authorized YouTube session. This avoids failing API-key restrictions
   // and ensures discovery runs under the same Google account the user connected.
   const userToken=bearer(req);
+  if(!userToken&&!process.env.YOUTUBE_API_KEY)return res.status(503).json({error:'Connect your YouTube account to search, or configure YOUTUBE_API_KEY on the preview service for public discovery.'});
   const discoveryYoutube=userToken?google.youtube({version:'v3',auth:oauthClient(userToken)}):publicYoutube;
   const response=await discoveryYoutube.search.list(params);
   const items=response.data.items||[],ids=items.map(x=>x.id?.videoId).filter(Boolean);
