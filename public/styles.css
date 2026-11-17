@@ -374,3 +374,5 @@ body :is(p,li,label,button,input,textarea,select,.nav-link,.nav-heading,.muted,.
 
 /* Account control: keep sign-out easy to find on mobile and desktop. */
 .sidebar-bottom{flex-wrap:wrap!important}.auth-signout{display:block!important;width:100%;margin-top:10px;padding:10px 14px!important;background:#f4e7cf!important;color:#684326!important;border:1px solid #cbb184!important;font-weight:700!important;text-align:center}
+
+.suhuis-account-identity{flex-basis:100%;min-width:0;overflow-wrap:anywhere;color:#f5e7d2;font-size:12px;font-weight:700;padding:0 0 8px}.suhuis-account-identity::before{content:'SIGNED IN AS';display:block;color:#c5a783;font-size:9px;letter-spacing:1.2px;margin-bottom:3px}
